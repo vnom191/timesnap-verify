@@ -3,365 +3,347 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TimeSnap Verify</title>
+<title>TimeSnap Verify — Advanced Photo Authentication</title>
+<meta name="description" content="Verify authenticity of TimeSnap photos and videos with advanced AI scanning." />
 <style>
-:root {
-  --bg: #f5f7fb;
-  --bg-elev: #ffffff;
-  --bg-soft: #f0f3f9;
-  --border: #e4e8f0;
-  --border-soft: #edf0f5;
-  --text: #0f172a;
-  --text-soft: #64748b;
-  --text-muted: #94a3b8;
-  --accent: #0f766e;
-  --accent-2: #0284c7;
-  --success: #059669;
-  --success-bg: #ecfdf5;
-  --success-border: #a7f3d0;
-  --warning: #d97706;
-  --warning-bg: #fffbeb;
-  --warning-border: #fcd34d;
-  --error: #dc2626;
-  --error-bg: #fef2f2;
-  --error-border: #fecaca;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+:root{
+  --bg:#f8fafc; --panel:#ffffff; --panel-2:#f1f5f9;
+  --border:#e2e8f0; --border-2:#edf0f5;
+  --text:#0f172a; --text-soft:#64748b; --text-mute:#94a3b8;
+  --accent:#0f766e; --accent-2:#0284c7;
+  --success:#059669; --success-bg:#ecfdf5; --success-border:#a7f3d0;
+  --warning:#d97706; --warning-bg:#fffbeb; --warning-border:#fcd34d;
+  --error:#dc2626; --error-bg:#fef2f2; --error-border:#fecaca;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.04);
+  --shadow-md:0 4px 12px rgba(15,23,42,.06);
+  --shadow-lg:0 20px 40px rgba(15,23,42,.08);
 }
-[data-theme="dark"] {
-  --bg: #0a0e1a;
-  --bg-elev: #0f1421;
-  --bg-soft: #131828;
-  --border: #1e2536;
-  --border-soft: #182035;
-  --text: #f1f5f9;
-  --text-soft: #94a3b8;
-  --text-muted: #64748b;
-  --accent: #14b8a6;
-  --accent-2: #0ea5e9;
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.08);
-  --success-border: rgba(16, 185, 129, 0.25);
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.08);
-  --warning-border: rgba(245, 158, 11, 0.25);
-  --error: #ef4444;
-  --error-bg: rgba(239, 68, 68, 0.08);
-  --error-border: rgba(239, 68, 68, 0.25);
+[data-theme="dark"]{
+  --bg:#0a0e1a; --panel:#0f1421; --panel-2:#131828;
+  --border:#1e2536; --border-2:#182035;
+  --text:#f1f5f9; --text-soft:#94a3b8; --text-mute:#64748b;
+  --accent:#14b8a6; --accent-2:#0ea5e9;
+  --success:#10b981; --success-bg:rgba(16,185,129,.08); --success-border:rgba(16,185,129,.25);
+  --warning:#f59e0b; --warning-bg:rgba(245,158,11,.08); --warning-border:rgba(245,158,11,.25);
+  --error:#ef4444; --error-bg:rgba(239,68,68,.08); --error-border:rgba(239,68,68,.25);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+  transition:background .3s, color .3s;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  transition: background 0.3s, color 0.3s;
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:var(--panel); border-bottom:1px solid var(--border);
+  padding:14px 28px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:17px}
+.brand-mark{
+  width:34px;height:34px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  color:white;font-weight:800;font-size:14px;letter-spacing:-.5px;
+}
+.topright{display:flex;align-items:center;gap:12px}
+.chip{
+  padding:6px 12px;
+  background:var(--panel-2); border:1px solid var(--border);
+  border-radius:8px; font-size:12px; color:var(--text-soft); font-weight:600;
+}
+.theme-btn{
+  width:38px;height:38px;border-radius:10px;
+  border:1px solid var(--border); background:var(--panel-2);
+  cursor:pointer; font-size:17px; color:var(--text-soft);
 }
 
-.nav {
-  position: sticky; top: 0; z-index: 50;
-  background: var(--bg-elev);
-  border-bottom: 1px solid var(--border);
-  padding: 14px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.wrap{max-width:1200px;margin:0 auto;padding:32px 28px 60px}
+
+.header{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:32px;gap:24px;flex-wrap:wrap;
 }
-.nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; }
-.nav-logo {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  color: white; font-weight: 800; font-size: 15px;
+.header-left h1{
+  font-size:34px;font-weight:800;letter-spacing:-1px;
+  line-height:1.1;margin:0 0 8px;color:var(--text);
 }
-.theme-btn {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
+.header-left p{
+  color:var(--text-soft);font-size:15px;max-width:520px;line-height:1.6;margin:0;
+}
+.stat-row{display:flex;gap:16px;align-items:center}
+.stat-item{
+  padding:12px 18px; background:var(--panel);
+  border:1px solid var(--border); border-radius:10px;
+  min-width:110px; box-shadow:var(--shadow-sm);
+}
+.stat-label{
+  font-size:10px;color:var(--text-mute);
+  letter-spacing:1.5px;text-transform:uppercase;
+  font-weight:700;margin-bottom:4px;
+}
+.stat-val{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.stat-val.ok{color:var(--success)}
+
+.layout{display:grid;grid-template-columns:380px 1fr;gap:24px}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.stat-row{display:none}}
+
+.panel{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:16px; padding:24px; box-shadow:var(--shadow-sm);
+}
+.panel-title{
+  font-size:11px;color:var(--text-soft);
+  letter-spacing:1.8px;text-transform:uppercase;
+  font-weight:800;margin-bottom:16px;
+  padding-bottom:12px;border-bottom:1px solid var(--border);
 }
 
-.container { max-width: 780px; margin: 0 auto; padding: 40px 24px 80px; }
+.tabs{
+  display:flex;gap:4px;background:var(--panel-2);
+  padding:4px;border-radius:10px;margin-bottom:20px;
+}
+.tab{
+  flex:1;padding:10px;background:transparent;border:none;
+  color:var(--text-soft);font-size:12px;font-weight:700;
+  cursor:pointer;border-radius:7px;font-family:inherit;
+  transition:all .2s;
+}
+.tab.active{background:var(--panel);color:var(--text);box-shadow:var(--shadow-sm)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
 
-.hero { text-align: center; margin-bottom: 32px; }
-.hero-tag {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  color: var(--accent);
-  font-size: 12px; font-weight: 700;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  margin-bottom: 18px;
+.drop{
+  display:block;border:2px dashed var(--border);
+  background:var(--panel-2);border-radius:12px;
+  padding:40px 20px;text-align:center;
+  cursor:pointer;transition:all .25s;position:relative;
 }
-.hero-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-.hero h1 { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 12px; }
-.hero p { color: var(--text-soft); font-size: 15px; max-width: 500px; margin: 0 auto; line-height: 1.6; }
+.drop:hover,.drop.drag{border-color:var(--accent);background:var(--panel)}
+.drop input[type=file]{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.drop-ic{
+  width:54px;height:54px;margin:0 auto 12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  color:white;font-size:24px;
+}
+.drop-t{font-size:15px;font-weight:700;margin-bottom:4px}
+.drop-s{color:var(--text-soft);font-size:12px}
 
-.card {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: var(--shadow-md);
+.label{
+  display:block;font-size:10px;color:var(--text-soft);
+  margin-bottom:8px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
 }
+.input{
+  width:100%;padding:16px 18px;
+  background:var(--panel-2);border:1.5px solid var(--border);
+  border-radius:10px;color:var(--text);font-size:18px;
+  font-family:"SF Mono",Monaco,monospace;
+  letter-spacing:2.5px;text-align:center;text-transform:uppercase;
+}
+.input:focus{outline:none;border-color:var(--accent)}
+.btn{
+  width:100%;padding:14px;margin-top:14px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:white;border:none;border-radius:10px;
+  font-size:13px;font-weight:800;letter-spacing:1px;
+  cursor:pointer;text-transform:uppercase;font-family:inherit;
+}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 
-.tabs {
-  display: flex; gap: 6px;
-  background: var(--bg-soft);
-  padding: 5px;
-  border-radius: 12px;
-  margin-bottom: 24px;
+.progress{
+  margin-top:20px;padding:16px;
+  background:var(--panel-2);border-radius:10px;display:none;
 }
-.tab {
-  flex: 1; padding: 12px;
-  background: transparent; border: none;
-  color: var(--text-soft);
-  font-size: 13px; font-weight: 700;
-  cursor: pointer;
-  border-radius: 8px;
-  font-family: inherit;
-  transition: all 0.2s;
+.progress.on{display:block}
+.progress-hd{display:flex;justify-content:space-between;margin-bottom:10px}
+.progress-lbl{font-size:12px;font-weight:700}
+.progress-pct{font-size:12px;color:var(--accent);font-weight:800}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  width:0%;transition:width .3s;
 }
-.tab.active { background: var(--bg-elev); color: var(--text); box-shadow: var(--shadow-sm); }
+.progress-st{margin-top:8px;font-size:11px;color:var(--text-soft)}
 
-.panel { display: none; }
-.panel.active { display: block; }
+.result-empty{padding:60px 30px;text-align:center;color:var(--text-mute)}
+.result-empty-ic{
+  width:60px;height:60px;border-radius:50%;
+  background:var(--panel-2);margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;color:var(--text-mute);
+}
+.result-empty-t{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text-soft)}
+.result-empty-s{font-size:13px}
 
-.drop {
-  display: block;
-  border: 2px dashed var(--border);
-  background: var(--bg-soft);
-  border-radius: 14px;
-  padding: 48px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.25s;
-  position: relative;
+.verdict{
+  padding:18px 22px;border-radius:12px;margin-bottom:20px;
+  display:flex;gap:14px;align-items:flex-start;
 }
-.drop:hover, .drop.drag { border-color: var(--accent); background: var(--bg-elev); }
-.drop input[type="file"] { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
-.drop-icon {
-  width: 60px; height: 60px;
-  margin: 0 auto 14px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 26px;
+.verdict.success{background:var(--success-bg);border:1px solid var(--success-border)}
+.verdict.warning{background:var(--warning-bg);border:1px solid var(--warning-border)}
+.verdict.error{background:var(--error-bg);border:1px solid var(--error-border)}
+.verdict-ic{
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;color:white;font-weight:800;flex-shrink:0;
 }
-.drop-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-.drop-sub { color: var(--text-soft); font-size: 13px; }
+.verdict.success .verdict-ic{background:var(--success)}
+.verdict.warning .verdict-ic{background:var(--warning)}
+.verdict.error .verdict-ic{background:var(--error)}
+.verdict-t{font-size:16px;font-weight:800;margin-bottom:2px}
+.verdict.success .verdict-t{color:var(--success)}
+.verdict.warning .verdict-t{color:var(--warning)}
+.verdict.error .verdict-t{color:var(--error)}
+.verdict-m{color:var(--text-soft);font-size:13px;line-height:1.5}
 
-.label {
-  display: block; font-size: 11px; color: var(--text-soft);
-  margin-bottom: 10px; font-weight: 700;
-  letter-spacing: 1.8px; text-transform: uppercase;
+.preview{
+  margin-bottom:20px;border-radius:12px;overflow:hidden;
+  border:1px solid var(--border); background:var(--panel-2);
+  max-height:500px; display:flex; justify-content:center;
 }
-.input {
-  width: 100%; padding: 18px 20px;
-  background: var(--bg-soft);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
-  color: var(--text);
-  font-size: 20px;
-  font-family: "SF Mono", Monaco, monospace;
-  letter-spacing: 3px;
-  text-align: center;
-  text-transform: uppercase;
-}
-.input:focus { outline: none; border-color: var(--accent); }
+.preview img{max-width:100%;max-height:500px;object-fit:contain}
 
-.btn {
-  width: 100%; padding: 16px;
-  margin-top: 16px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: white; border: none;
-  border-radius: 12px;
-  font-size: 14px; font-weight: 800;
-  letter-spacing: 1px; cursor: pointer;
-  text-transform: uppercase;
-  font-family: inherit;
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.cell{
+  padding:14px 16px;background:var(--panel-2);
+  border:1px solid var(--border-2);border-radius:10px;
 }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cell-l{
+  font-size:10px;color:var(--text-soft);
+  letter-spacing:1.2px;text-transform:uppercase;
+  font-weight:700;margin-bottom:4px;
+}
+.cell-v{font-size:14px;font-weight:600;word-break:break-word}
+.cell.wide{grid-column:1 / -1}
 
-.progress {
-  margin-top: 20px; padding: 18px;
-  background: var(--bg-soft);
-  border-radius: 12px;
-  display: none;
+.map{
+  height:260px;border-radius:12px;overflow:hidden;
+  border:1px solid var(--border);
 }
-.progress.active { display: block; }
-.progress-top { display: flex; justify-content: space-between; margin-bottom: 10px; }
-.progress-label { font-size: 13px; font-weight: 600; }
-.progress-pct { font-size: 13px; color: var(--accent); font-weight: 700; }
-.progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); width: 0%; transition: width 0.3s; }
-.progress-status { margin-top: 8px; font-size: 12px; color: var(--text-soft); }
+.map iframe{width:100%;height:100%;border:0}
+[data-theme="dark"] .map iframe{filter:invert(.92) hue-rotate(180deg)}
 
-.result { margin-top: 24px; display: none; }
-.result.show { display: block; }
+.warn-box{
+  margin-top:16px;padding:14px 18px;
+  background:var(--warning-bg);border-left:4px solid var(--warning);
+  border-radius:8px;color:var(--warning);
+  font-size:13px;line-height:1.6;
+}
+.warn-box strong{display:block;margin-bottom:3px;font-size:13px}
 
-.preview {
-  margin-bottom: 20px;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-height: 500px;
+.share-row{
+  display:flex;gap:8px;margin-top:16px;
 }
-.preview img { max-width: 100%; max-height: 500px; object-fit: contain; display: block; }
+.share-btn{
+  flex:1;padding:10px 12px;
+  background:var(--panel-2);border:1px solid var(--border);
+  border-radius:10px;color:var(--text-soft);
+  font-size:12px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:all .2s;
+}
+.share-btn:hover{color:var(--text);border-color:var(--accent)}
 
-.verdict {
-  padding: 20px 24px;
-  border-radius: 14px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+.foot{
+  text-align:center;margin-top:32px;
+  color:var(--text-mute);font-size:11px;
+  letter-spacing:1.5px;text-transform:uppercase;
 }
-.verdict.success { background: var(--success-bg); border: 1px solid var(--success-border); }
-.verdict.warning { background: var(--warning-bg); border: 1px solid var(--warning-border); }
-.verdict.error { background: var(--error-bg); border: 1px solid var(--error-border); }
-.verdict-icon {
-  width: 42px; height: 42px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; color: white; font-weight: 800; flex-shrink: 0;
-}
-.verdict.success .verdict-icon { background: var(--success); }
-.verdict.warning .verdict-icon { background: var(--warning); }
-.verdict.error .verdict-icon { background: var(--error); }
-.verdict-title { font-size: 17px; font-weight: 800; margin-bottom: 3px; }
-.verdict.success .verdict-title { color: var(--success); }
-.verdict.warning .verdict-title { color: var(--warning); }
-.verdict.error .verdict-title { color: var(--error); }
-.verdict-msg { color: var(--text-soft); font-size: 13px; line-height: 1.6; }
-
-.details-title {
-  font-size: 12px; color: var(--text-soft);
-  letter-spacing: 2px; text-transform: uppercase;
-  font-weight: 800; margin-bottom: 14px;
-  padding-bottom: 10px; border-bottom: 1px solid var(--border);
-}
-
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.cell {
-  padding: 14px 16px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-}
-.cell-label {
-  font-size: 11px; color: var(--text-soft);
-  letter-spacing: 1.2px; text-transform: uppercase;
-  font-weight: 700; margin-bottom: 4px;
-}
-.cell-value { font-size: 14px; font-weight: 600; word-break: break-word; }
-.cell.wide { grid-column: 1 / -1; }
-
-.map {
-  height: 240px; border-radius: 12px;
-  overflow: hidden; border: 1px solid var(--border);
-  margin-top: 8px;
-}
-.map iframe { width: 100%; height: 100%; border: 0; }
-[data-theme="dark"] .map iframe { filter: invert(0.92) hue-rotate(180deg); }
-
-.warning-box {
-  margin-top: 14px; padding: 14px 18px;
-  background: var(--warning-bg);
-  border-left: 4px solid var(--warning);
-  border-radius: 8px;
-  color: var(--warning);
-  font-size: 13px; line-height: 1.6;
-}
-.warning-box strong { display: block; margin-bottom: 3px; font-size: 14px; }
-
-.footer {
-  text-align: center; margin-top: 32px;
-  color: var(--text-muted); font-size: 11px;
-  letter-spacing: 1.5px; text-transform: uppercase;
-}
-.footer a { color: var(--accent); text-decoration: none; }
-
-@media (max-width: 640px) {
-  .grid { grid-template-columns: 1fr; }
-  .hero h1 { font-size: 30px; }
-  .card { padding: 20px; }
-}
+.foot a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-brand">
-    <div class="nav-logo">TS</div>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">TS</div>
     <span>TimeSnap Verify</span>
   </div>
-  <button class="theme-btn" id="themeBtn" title="Toggle theme">🌙</button>
-</nav>
-
-<div class="container">
-  <div class="hero">
-    <div class="hero-tag"><span class="hero-dot"></span>Verification Portal</div>
-    <h1>Authenticate any TimeSnap</h1>
-    <p>Upload a photo or enter a verification code to confirm the exact date, time, and location it was captured.</p>
+  <div class="topright">
+    <div class="chip">Advanced OCR</div>
+    <button class="theme-btn" id="themeBtn" type="button">M</button>
   </div>
+</div>
 
-  <div class="card">
-    <div class="tabs">
-      <button class="tab active" data-tab="upload" type="button">Upload Photo</button>
-      <button class="tab" data-tab="code" type="button">Enter Code</button>
+<div class="wrap">
+  <div class="header">
+    <div class="header-left">
+      <h1>Authentication Dashboard</h1>
+      <p>Verify the authenticity of any TimeSnap photo or video. Advanced AI scanner detects codes even from cropped, rotated, or low-quality images.</p>
     </div>
-
-    <div class="panel active" id="panel-upload">
-      <label class="drop" for="tsvFile" id="tsvDrop">
-        <div class="drop-icon">↑</div>
-        <div class="drop-title">Drop a photo or click to browse</div>
-        <div class="drop-sub">Scanner reads codes at any angle or rotation</div>
-        <input type="file" id="tsvFile" accept="image/*" />
-      </label>
-    </div>
-
-    <div class="panel" id="panel-code">
-      <label class="label">Verification Code</label>
-      <input type="text" id="tsvCode" class="input" placeholder="TS-XXXXXXX" maxlength="10" autocomplete="off" spellcheck="false" />
-      <button class="btn" id="tsvVerifyBtn" type="button">Verify Now</button>
-    </div>
-
-    <div class="progress" id="tsvProgress">
-      <div class="progress-top">
-        <span class="progress-label" id="tsvProgressLabel">Scanning</span>
-        <span class="progress-pct" id="tsvProgressPct">0%</span>
+    <div class="stat-row">
+      <div class="stat-item">
+        <div class="stat-label">Engine</div>
+        <div class="stat-val ok">Online</div>
       </div>
-      <div class="progress-bar"><div class="progress-fill" id="tsvProgressFill"></div></div>
-      <div class="progress-status" id="tsvProgressStatus">Analyzing image</div>
+      <div class="stat-item">
+        <div class="stat-label">Strategies</div>
+        <div class="stat-val">24+</div>
+      </div>
     </div>
-
-    <div class="result" id="tsvResult"></div>
   </div>
 
-  <div class="footer">Powered by <a href="https://timesnap.info">TIMESNAP.INFO</a></div>
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-title">Input</div>
+      <div class="tabs">
+        <button class="tab active" data-tab="upload" type="button">Upload</button>
+        <button class="tab" data-tab="code" type="button">Code</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-upload">
+        <label class="drop" for="tsvFile" id="tsvDrop">
+          <div class="drop-ic">+</div>
+          <div class="drop-t">Drop photo or click to browse</div>
+          <div class="drop-s">Advanced AI scanner reads codes at any angle</div>
+          <input type="file" id="tsvFile" accept="image/*" />
+        </label>
+      </div>
+
+      <div class="tab-panel" id="tab-code">
+        <label class="label">Verification Code</label>
+        <input type="text" id="tsvCode" class="input" placeholder="TS-XXXXXXX" maxlength="10" autocomplete="off" spellcheck="false" />
+        <button class="btn" id="tsvBtn" type="button">Verify Now</button>
+      </div>
+
+      <div class="progress" id="tsvProgress">
+        <div class="progress-hd">
+          <span class="progress-lbl">Scanning</span>
+          <span class="progress-pct" id="tsvPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="tsvFill"></div></div>
+        <div class="progress-st" id="tsvSt">Analyzing image</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Result</div>
+      <div id="tsvResult">
+        <div class="result-empty">
+          <div class="result-empty-ic">?</div>
+          <div class="result-empty-t">No verification yet</div>
+          <div class="result-empty-s">Upload a photo or enter a code to see details</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">Powered by <a href="https://timesnap.info">TIMESNAP.INFO</a></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
 <script>
-(function() {
-  const firebaseConfig = {
+(function(){
+  var firebaseConfig = {
     apiKey: "AIzaSyAP5_okpPwM-O1Onp8W0U9gJt4V1K8I4T8",
     authDomain: "timesnap-guardian.firebaseapp.com",
     projectId: "timesnap-guardian",
@@ -369,149 +351,234 @@ body {
     messagingSenderId: "1022815149876",
     appId: "1:1022815149876:web:67582e36a34b47e9170f61"
   };
-  if (typeof firebase === 'undefined') { console.error('Firebase not loaded'); return; }
+  if (typeof firebase === "undefined") { console.error("Firebase not loaded"); return; }
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  var db = firebase.firestore();
 
-  const themeBtn = document.getElementById('themeBtn');
-  const saved = localStorage.getItem('tsvTheme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
-  themeBtn.textContent = saved === 'dark' ? '☀️' : '🌙';
-  themeBtn.addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme');
-    const nxt = cur === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', nxt);
-    localStorage.setItem('tsvTheme', nxt);
-    themeBtn.textContent = nxt === 'dark' ? '☀️' : '🌙';
+  var themeBtn = document.getElementById("themeBtn");
+  var saved = localStorage.getItem("tsvTheme") || "light";
+  document.documentElement.setAttribute("data-theme", saved);
+  themeBtn.textContent = saved === "dark" ? "S" : "M";
+  themeBtn.addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var nxt = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", nxt);
+    localStorage.setItem("tsvTheme", nxt);
+    themeBtn.textContent = nxt === "dark" ? "S" : "M";
   });
 
-  const tabs = document.querySelectorAll('.tab');
-  const panels = document.querySelectorAll('.panel');
-  const codeInput = document.getElementById('tsvCode');
-  const verifyBtn = document.getElementById('tsvVerifyBtn');
-  const fileInput = document.getElementById('tsvFile');
-  const dropZone = document.getElementById('tsvDrop');
-  const progress = document.getElementById('tsvProgress');
-  const progressPct = document.getElementById('tsvProgressPct');
-  const progressFill = document.getElementById('tsvProgressFill');
-  const progressStatus = document.getElementById('tsvProgressStatus');
-  const resultDiv = document.getElementById('tsvResult');
+  var tabs = document.querySelectorAll(".tab");
+  var panels = document.querySelectorAll(".tab-panel");
+  var codeInput = document.getElementById("tsvCode");
+  var verifyBtn = document.getElementById("tsvBtn");
+  var fileInput = document.getElementById("tsvFile");
+  var dropZone = document.getElementById("tsvDrop");
+  var progress = document.getElementById("tsvProgress");
+  var progressPct = document.getElementById("tsvPct");
+  var progressFill = document.getElementById("tsvFill");
+  var progressSt = document.getElementById("tsvSt");
+  var resultDiv = document.getElementById("tsvResult");
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      panels.forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-      resultDiv.classList.remove('show');
+  tabs.forEach(function(t){
+    t.addEventListener("click", function(){
+      tabs.forEach(function(x){ x.classList.remove("active"); });
+      panels.forEach(function(p){ p.classList.remove("active"); });
+      t.classList.add("active");
+      document.getElementById("tab-" + t.dataset.tab).classList.add("active");
     });
   });
 
-  function setProgress(pct, status) {
-    progress.classList.add('active');
-    progressFill.style.width = pct + '%';
-    progressPct.textContent = Math.round(pct) + '%';
-    if (status) progressStatus.textContent = status;
+  function setProgress(pct, status){
+    progress.classList.add("on");
+    progressFill.style.width = pct + "%";
+    progressPct.textContent = Math.round(pct) + "%";
+    if (status) progressSt.textContent = status;
   }
-  function hideProgress() {
-    progress.classList.remove('active');
-    progressFill.style.width = '0%';
+  function hideProgress(){
+    progress.classList.remove("on");
+    progressFill.style.width = "0%";
   }
 
-  function renderResult(type, iconChar, title, msg, imageUrl, code, data) {
-    let html = '';
-    if (imageUrl) html += '<div class="preview"><img src="' + imageUrl + '" alt="" /></div>';
-    html += '<div class="verdict ' + type + '"><div class="verdict-icon">' + iconChar + '</div><div><div class="verdict-title">' + title + '</div><div class="verdict-msg">' + msg + '</div></div></div>';
+  function renderResult(type, iconChar, title, msg, imageUrl, code, data){
+    var html = "";
+    if (imageUrl) {
+      html += '<div class="preview"><img src="' + imageUrl + '" alt="" /></div>';
+    }
+    html += '<div class="verdict ' + type + '">' +
+      '<div class="verdict-ic">' + iconChar + '</div>' +
+      '<div><div class="verdict-t">' + title + '</div>' +
+      '<div class="verdict-m">' + msg + '</div></div></div>';
 
     if (data) {
-      const ts = data.timestamp.toDate();
-      const dateStr = ts.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-      const timeStr = ts.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      const source = data.timeSource === 'internet' ? 'NTP Verified' : 'Device Clock';
-      const coords = (data.latitude && data.longitude) ? data.latitude.toFixed(5) + ', ' + data.longitude.toFixed(5) : 'N/A';
-      const media = data.mediaType === 'video' ? 'Video' : 'Photo';
+      var ts = data.timestamp.toDate();
+      var dateStr = ts.toLocaleDateString("en-GB", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+      var timeStr = ts.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false });
+      var source = data.timeSource === "internet" ? "NTP Verified" : "Device Clock";
+      var coords = (data.latitude && data.longitude) ? data.latitude.toFixed(5) + ", " + data.longitude.toFixed(5) : "N/A";
+      var media = data.mediaType === "video" ? "Video" : "Photo";
 
-      html += '<div class="details-title">Capture Details</div><div class="grid">' +
-        '<div class="cell"><div class="cell-label">Code</div><div class="cell-value">' + code + '</div></div>' +
-        '<div class="cell"><div class="cell-label">Media Type</div><div class="cell-value">' + media + '</div></div>' +
-        '<div class="cell"><div class="cell-label">Date</div><div class="cell-value">' + dateStr + '</div></div>' +
-        '<div class="cell"><div class="cell-label">Time</div><div class="cell-value">' + timeStr + '</div></div>' +
-        '<div class="cell"><div class="cell-label">Time Source</div><div class="cell-value">' + source + '</div></div>' +
-        '<div class="cell"><div class="cell-label">Coordinates</div><div class="cell-value">' + coords + '</div></div>' +
-        '<div class="cell wide"><div class="cell-label">Location</div><div class="cell-value">' + (data.address || 'N/A') + '</div></div></div>';
+      html += '<div class="grid">' +
+        '<div class="cell"><div class="cell-l">Code</div><div class="cell-v">' + code + '</div></div>' +
+        '<div class="cell"><div class="cell-l">Type</div><div class="cell-v">' + media + '</div></div>' +
+        '<div class="cell"><div class="cell-l">Date</div><div class="cell-v">' + dateStr + '</div></div>' +
+        '<div class="cell"><div class="cell-l">Time</div><div class="cell-v">' + timeStr + '</div></div>' +
+        '<div class="cell"><div class="cell-l">Time Source</div><div class="cell-v">' + source + '</div></div>' +
+        '<div class="cell"><div class="cell-l">Coordinates</div><div class="cell-v">' + coords + '</div></div>' +
+        '<div class="cell wide"><div class="cell-l">Location</div><div class="cell-v">' + (data.address || "N/A") + '</div></div>' +
+        '</div>';
 
       if (data.latitude && data.longitude) {
-        const mapUrl = 'https://www.openstreetmap.org/export/embed.html?bbox=' +
-          (data.longitude - 0.005) + ',' + (data.latitude - 0.003) + ',' +
-          (data.longitude + 0.005) + ',' + (data.latitude + 0.003) +
-          '&layer=mapnik&marker=' + data.latitude + ',' + data.longitude;
+        var mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=" +
+          (data.longitude - 0.005) + "," + (data.latitude - 0.003) + "," +
+          (data.longitude + 0.005) + "," + (data.latitude + 0.003) +
+          "&layer=mapnik&marker=" + data.latitude + "," + data.longitude;
         html += '<div class="map"><iframe src="' + mapUrl + '" loading="lazy"></iframe></div>';
       }
 
-      if (data.timeSource !== 'internet') {
-        html += '<div class="warning-box"><strong>⚠ TAMPERING WARNING</strong>This photo was captured while offline. Device clock can be manually changed. Treat with caution.</div>';
+      if (data.timeSource !== "internet") {
+        html += '<div class="warn-box"><strong>Tampering Warning</strong>Photo captured while offline. Device clock can be manually changed. Treat with caution.</div>';
       }
-    }
 
+      var shareText = "TimeSnap Verified: " + code + " taken " + dateStr + " at " + timeStr;
+      html += '<div class="share-row">' +
+        '<button class="share-btn" onclick="navigator.clipboard.writeText(\'' + code + '\')">Copy Code</button>' +
+        '<button class="share-btn" onclick="navigator.share ? navigator.share({title:\'TimeSnap Verified\',text:\'' + shareText.replace(/'/g,"") + '\'}) : navigator.clipboard.writeText(\'' + shareText.replace(/'/g,"") + '\')">Share</button>' +
+        '</div>';
+    }
     resultDiv.innerHTML = html;
-    resultDiv.classList.add('show');
-    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async function verifyCode(code, imageUrl) {
-    try {
-      const doc = await db.collection('verifications').doc(code).get();
+  function verifyCode(code, imageUrl){
+    return db.collection("verifications").doc(code).get().then(function(doc){
       if (!doc.exists) {
-        renderResult('error', '✕', 'Code Not Found',
-          'This verification code was not found in our database.', imageUrl, code, null);
+        renderResult("error", "X", "Code Not Found",
+          "This verification code was not found in our database.",
+          imageUrl, code, null);
         hideProgress();
         return;
       }
-      const data = doc.data();
-      if (data.timeSource === 'internet') {
-        renderResult('success', '✓', 'Verified Authentic',
-          'This TimeSnap was captured with verified internet time. All metadata is trustworthy.',
+      var data = doc.data();
+      if (data.timeSource === "internet") {
+        renderResult("success", "OK", "Verified Authentic",
+          "This TimeSnap was captured with verified internet time. Metadata is trustworthy.",
           imageUrl, code, data);
       } else {
-        renderResult('warning', '⚠', 'Possibly Tampered',
-          'This photo was saved with device-clock time instead of verified internet time.',
+        renderResult("warning", "!", "Possibly Tampered",
+          "This photo was saved with device-clock time instead of verified internet time.",
           imageUrl, code, data);
       }
       hideProgress();
-    } catch (err) {
-      renderResult('error', '✕', 'Verification Failed', err.message, imageUrl, code, null);
+    }).catch(function(err){
+      renderResult("error", "X", "Verification Failed", err.message, imageUrl, code, null);
       hideProgress();
-    }
+    });
   }
 
-  // ===== IMAGE PREPROCESSING =====
-  // Convert to grayscale, boost contrast, apply threshold — makes OCR way more reliable
-  function preprocessCanvas(canvas) {
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const d = imgData.data;
+  // ===== ADVANCED IMAGE PREPROCESSING =====
 
-    // Step 1: grayscale + contrast boost
-    for (let i = 0; i < d.length; i += 4) {
-      const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-      // Increase contrast: pixels below 128 get darker, above get lighter
-      const boosted = gray < 100 ? Math.max(0, gray - 40) :
-                      gray > 155 ? Math.min(255, gray + 40) : gray;
-      d[i] = d[i+1] = d[i+2] = boosted;
+  // Adaptive threshold (Otsu-like) — best for text on varied backgrounds
+  function adaptiveThreshold(canvas){
+    var ctx = canvas.getContext("2d");
+    var d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var px = d.data;
+    var histogram = new Array(256).fill(0);
+    for (var i = 0; i < px.length; i += 4) {
+      var g = Math.round(0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2]);
+      histogram[g]++;
     }
-
-    ctx.putImageData(imgData, 0, 0);
+    // Find Otsu threshold
+    var total = (px.length / 4);
+    var sum = 0;
+    for (var t = 0; t < 256; t++) sum += t * histogram[t];
+    var sumB = 0, wB = 0, wF = 0, maxVar = 0, threshold = 128;
+    for (var i = 0; i < 256; i++) {
+      wB += histogram[i];
+      if (wB === 0) continue;
+      wF = total - wB;
+      if (wF === 0) break;
+      sumB += i * histogram[i];
+      var mB = sumB / wB;
+      var mF = (sum - sumB) / wF;
+      var v = wB * wF * (mB - mF) * (mB - mF);
+      if (v > maxVar) { maxVar = v; threshold = i; }
+    }
+    for (var i = 0; i < px.length; i += 4) {
+      var g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+      var val = g > threshold ? 255 : 0;
+      px[i] = px[i+1] = px[i+2] = val;
+    }
+    ctx.putImageData(d, 0, 0);
     return canvas;
   }
 
-  // Extract a region of the image, apply rotation, scale up, preprocess
-  function extractRegion(img, sx, sy, sw, sh, rotate, preprocess) {
-    const scale = Math.max(2, 1800 / Math.max(sw, sh));
-    const outW = Math.round(sw * scale);
-    const outH = Math.round(sh * scale);
+  // Contrast boost preserving colors
+  function contrastBoost(canvas, factor){
+    factor = factor || 1.5;
+    var ctx = canvas.getContext("2d");
+    var d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var px = d.data;
+    var intercept = 128 * (1 - factor);
+    for (var i = 0; i < px.length; i += 4) {
+      var g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+      var v = Math.max(0, Math.min(255, g * factor + intercept));
+      px[i] = px[i+1] = px[i+2] = v;
+    }
+    ctx.putImageData(d, 0, 0);
+    return canvas;
+  }
 
-    const c = document.createElement('canvas');
-    const cx = c.getContext('2d');
+  // Invert colors — for white text on dark backgrounds
+  function invertCanvas(canvas){
+    var ctx = canvas.getContext("2d");
+    var d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var px = d.data;
+    for (var i = 0; i < px.length; i += 4) {
+      px[i] = 255 - px[i];
+      px[i+1] = 255 - px[i+1];
+      px[i+2] = 255 - px[i+2];
+    }
+    ctx.putImageData(d, 0, 0);
+    return canvas;
+  }
+
+  // Sharpen filter
+  function sharpen(canvas){
+    var ctx = canvas.getContext("2d");
+    var w = canvas.width, h = canvas.height;
+    var src = ctx.getImageData(0, 0, w, h);
+    var out = ctx.createImageData(w, h);
+    var kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        for (var c = 0; c < 3; c++) {
+          var sum = 0;
+          for (var ky = -1; ky <= 1; ky++) {
+            for (var kx = -1; kx <= 1; kx++) {
+              var idx = ((y + ky) * w + (x + kx)) * 4 + c;
+              sum += src.data[idx] * kernel[(ky+1)*3 + (kx+1)];
+            }
+          }
+          out.data[(y*w + x)*4 + c] = Math.max(0, Math.min(255, sum));
+        }
+        out.data[(y*w + x)*4 + 3] = 255;
+      }
+    }
+    ctx.putImageData(out, 0, 0);
+    return canvas;
+  }
+
+  // Extract region with rotation and optional processing
+  function extractRegion(img, sx, sy, sw, sh, rotate, processMode){
+    // Aggressive upscaling for tiny text
+    var maxDim = Math.max(sw, sh);
+    var scale = Math.max(3, 2400 / maxDim);
+    var outW = Math.round(sw * scale);
+    var outH = Math.round(sh * scale);
+
+    var c = document.createElement("canvas");
+    var cx = c.getContext("2d");
+    cx.imageSmoothingEnabled = true;
+    cx.imageSmoothingQuality = "high";
 
     if (rotate === 0) {
       c.width = outW; c.height = outH;
@@ -519,7 +586,7 @@ body {
     } else if (rotate === 90 || rotate === 270) {
       c.width = outH; c.height = outW;
       cx.save();
-      cx.translate(c.width / 2, c.height / 2);
+      cx.translate(c.width/2, c.height/2);
       cx.rotate(rotate * Math.PI / 180);
       cx.drawImage(img, sx, sy, sw, sh, -outW/2, -outH/2, outW, outH);
       cx.restore();
@@ -532,156 +599,195 @@ body {
       cx.restore();
     }
 
-    if (preprocess) preprocessCanvas(c);
+    if (processMode === "adaptive") adaptiveThreshold(c);
+    else if (processMode === "contrast") contrastBoost(c, 1.8);
+    else if (processMode === "invert") { invertCanvas(c); adaptiveThreshold(c); }
+    else if (processMode === "sharpen") { sharpen(c); contrastBoost(c, 1.3); }
+    else if (processMode === "sharp-thresh") { sharpen(c); adaptiveThreshold(c); }
+
     return c;
   }
 
-  // Build all scanning strategies — code could be anywhere at any rotation
-  function buildStrategies(img) {
-    const W = img.width, H = img.height;
-    return [
-      // LEFT edge (vertical text — needs 90° rotation to read horizontally)
-      // Original code is at left edge going bottom-to-top → rotate 90° CCW = 270 in canvas
-      { name: 'left edge rotated', sx: 0, sy: 0, sw: W * 0.15, sh: H, rotate: 270, preprocess: true },
-      { name: 'left edge rotated raw', sx: 0, sy: 0, sw: W * 0.15, sh: H, rotate: 270, preprocess: false },
-      { name: 'left edge cw', sx: 0, sy: 0, sw: W * 0.15, sh: H, rotate: 90, preprocess: true },
-      { name: 'left edge wider', sx: 0, sy: 0, sw: W * 0.25, sh: H, rotate: 270, preprocess: true },
+  // Build all strategies — code could be anywhere at any orientation
+  function buildStrategies(img){
+    var W = img.width, H = img.height;
+    var strategies = [];
 
-      // RIGHT edge (in case photo is flipped)
-      { name: 'right edge rotated', sx: W * 0.85, sy: 0, sw: W * 0.15, sh: H, rotate: 90, preprocess: true },
-      { name: 'right edge rotated raw', sx: W * 0.85, sy: 0, sw: W * 0.15, sh: H, rotate: 270, preprocess: true },
-
-      // BOTTOM edge
-      { name: 'bottom edge', sx: 0, sy: H * 0.85, sw: W, sh: H * 0.15, rotate: 0, preprocess: true },
-      { name: 'bottom edge left', sx: 0, sy: H * 0.85, sw: W * 0.5, sh: H * 0.15, rotate: 0, preprocess: true },
-
-      // TOP edge
-      { name: 'top edge', sx: 0, sy: 0, sw: W, sh: H * 0.15, rotate: 180, preprocess: true },
-
-      // FULL image at all rotations as fallback
-      { name: 'full', sx: 0, sy: 0, sw: W, sh: H, rotate: 0, preprocess: false },
-      { name: 'full rotated', sx: 0, sy: 0, sw: W, sh: H, rotate: 90, preprocess: false },
-      { name: 'full flipped', sx: 0, sy: 0, sw: W, sh: H, rotate: 180, preprocess: false }
+    // Regions to try (in order of likelihood for TimeSnap codes)
+    var regions = [
+      // Left edge (primary location for TimeSnap codes — vertical text)
+      { name: "left edge", sx: 0, sy: 0, sw: W*0.15, sh: H },
+      { name: "left wider", sx: 0, sy: 0, sw: W*0.22, sh: H },
+      { name: "left narrow", sx: 0, sy: 0, sw: W*0.10, sh: H },
+      // Right edge
+      { name: "right edge", sx: W*0.85, sy: 0, sw: W*0.15, sh: H },
+      // Bottom
+      { name: "bottom", sx: 0, sy: H*0.80, sw: W, sh: H*0.20 },
+      { name: "bottom left", sx: 0, sy: H*0.80, sw: W*0.5, sh: H*0.20 },
+      // Top
+      { name: "top", sx: 0, sy: 0, sw: W, sh: H*0.20 },
+      // Full
+      { name: "full", sx: 0, sy: 0, sw: W, sh: H }
     ];
+
+    // For each region, try multiple rotations + processing modes
+    var rotations = [0, 90, 180, 270];
+    var processModes = ["raw", "adaptive", "sharpen", "invert"];
+
+    // Priority: left edge at 270° (most common for TimeSnap) with all processing
+    for (var i = 0; i < regions.length; i++) {
+      var r = regions[i];
+      // For left/right edges, rotations 90 and 270 are most important
+      var rotationOrder = (r.name.indexOf("left") === 0 || r.name.indexOf("right") === 0)
+        ? [270, 90, 0, 180]
+        : [0, 180, 90, 270];
+
+      for (var j = 0; j < rotationOrder.length; j++) {
+        for (var k = 0; k < processModes.length; k++) {
+          strategies.push({
+            name: r.name + " " + rotationOrder[j] + " " + processModes[k],
+            sx: r.sx, sy: r.sy, sw: r.sw, sh: r.sh,
+            rotate: rotationOrder[j],
+            processMode: processModes[k]
+          });
+        }
+      }
+    }
+
+    return strategies;
   }
 
   // Smart code extraction with OCR error correction
-  function extractCode(text) {
-    const cleaned = text.toUpperCase().replace(/\s+/g, ' ');
+  function extractCode(text){
+    var cleaned = text.toUpperCase().replace(/\s+/g, " ");
 
-    // Direct match TS-XXXXXXX
-    let match = cleaned.match(/TS[\-\s]*([A-Z0-9]{7})/);
-    if (match) return 'TS-' + match[1];
-
-    // Handle common OCR errors: T could be 7 or 1, S could be 5 or B
-    // Try patterns like "T5-XXXXXXX", "75-XXXXXXX", "IS-XXXXXXX"
-    match = cleaned.match(/[T7I][S5B][\-\s]*([A-Z0-9]{7})/);
+    // Direct match: TS-XXXXXXX
+    var match = cleaned.match(/TS[\-\s]*([A-Z0-9]{7})/);
     if (match) {
-      const candidate = 'TS-' + match[1];
+      var candidate = "TS-" + match[1];
       if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
     }
 
-    // Try to find a 7-char alphanumeric block preceded by a dash or space
-    match = cleaned.match(/[\-\s]([A-Z0-9]{7})[\s\.\,\)]/);
-    if (match && match[1].match(/^[A-Z0-9]{7}$/) && /\d/.test(match[1]) && /[A-Z]/.test(match[1])) {
-      return 'TS-' + match[1];
+    // OCR error tolerance: T↔7↔I, S↔5↔B
+    match = cleaned.match(/[T7I1L][S5B8][\-\s\.\,]*([A-Z0-9]{7})/);
+    if (match) {
+      var candidate = "TS-" + match[1];
+      if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
     }
+
+    // Try to find any 7-char alphanumeric block with a dash/space before
+    var blocks = cleaned.match(/[\-\s\.\,]([A-Z0-9]{7})[\-\s\.\,]/g);
+    if (blocks) {
+      for (var b = 0; b < blocks.length; b++) {
+        var m = blocks[b].match(/[A-Z0-9]{7}/);
+        if (m) {
+          var code = m[0];
+          // Must contain both letters and digits (not all same char)
+          if (/[A-Z]/.test(code) && /[0-9]/.test(code)) {
+            return "TS-" + code;
+          }
+        }
+      }
+    }
+
+    // Last resort: look for any TS followed by 7 chars, allowing OCR errors
+    match = cleaned.replace(/[^A-Z0-9\-]/g, "").match(/TS([A-Z0-9]{7})/);
+    if (match) return "TS-" + match[1];
 
     return null;
   }
 
-  async function runOCR(canvas) {
-    try {
-      const result = await Tesseract.recognize(canvas, 'eng', {
-        logger: () => {},
-        tessedit_char_whitelist: 'TSABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
-        tessedit_pageseg_mode: 6 // Assume uniform block of text
-      });
-      return result.data.text || '';
-    } catch (e) {
-      return '';
-    }
+  function runOCR(canvas){
+    return Tesseract.recognize(canvas, "eng", {
+      logger: function(){},
+      tessedit_char_whitelist: "TSABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+      tessedit_pageseg_mode: 7 // Single line of text
+    }).then(function(result){ return result.data.text || ""; })
+      .catch(function(){ return ""; });
   }
 
-  async function scanImage(file) {
-    setProgress(3, 'Loading image');
-    const imageUrl = URL.createObjectURL(file);
+  function scanImage(file){
+    setProgress(2, "Loading image");
+    var imageUrl = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      setProgress(5, "Building 100+ scan variants");
+      var strategies = buildStrategies(img);
+      var idx = 0, found = null;
 
-    const img = await new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = imageUrl;
-    });
-
-    setProgress(8, 'Analyzing image structure');
-    const strategies = buildStrategies(img);
-
-    let foundCode = null;
-    for (let i = 0; i < strategies.length; i++) {
-      if (foundCode) break;
-      const s = strategies[i];
-      const pct = 8 + ((i + 1) / strategies.length) * 88;
-      setProgress(pct, 'Scanning ' + s.name);
-
-      try {
-        const canvas = extractRegion(img, s.sx, s.sy, s.sw, s.sh, s.rotate, s.preprocess);
-        const text = await runOCR(canvas);
-        const code = extractCode(text);
-        if (code) {
-          foundCode = code;
-          break;
+      function tryNext(){
+        if (idx >= strategies.length || found) {
+          if (found) {
+            setProgress(100, "Code detected: " + found);
+            codeInput.value = found;
+            setTimeout(function(){ verifyCode(found, imageUrl); }, 300);
+          } else {
+            hideProgress();
+            renderResult("error", "?", "Code Not Recognized",
+              "Advanced AI scanner tried " + strategies.length + " variants but could not detect a TimeSnap code. The image may be tampered with, heavily cropped, or not from TimeSnap. Please try entering the code manually.",
+              imageUrl, null, null);
+          }
+          return;
         }
-      } catch (e) {}
-    }
+        var s = strategies[idx];
+        setProgress(5 + ((idx + 1) / strategies.length) * 93, "Scanning: " + s.name);
 
-    if (foundCode) {
-      setProgress(100, 'Code detected: ' + foundCode);
-      codeInput.value = foundCode;
-      await new Promise(r => setTimeout(r, 300));
-      await verifyCode(foundCode, imageUrl);
-    } else {
+        var canvas = extractRegion(img, s.sx, s.sy, s.sw, s.sh, s.rotate, s.processMode);
+        runOCR(canvas).then(function(text){
+          var code = extractCode(text);
+          if (code) found = code;
+          idx++;
+          // Small delay to keep UI responsive
+          setTimeout(tryNext, 10);
+        });
+      }
+      tryNext();
+    };
+    img.onerror = function(){
       hideProgress();
-      renderResult('error', '?', 'Code Not Recognized',
-        'We could not detect a TimeSnap code in this image. The photo might be tampered with, cropped, low quality, or was not created with TimeSnap. Try entering the code manually.',
-        imageUrl, null, null);
-    }
+      renderResult("error", "X", "Load Failed", "Could not load this image file.", null, null, null);
+    };
+    img.src = imageUrl;
   }
 
-  verifyBtn.addEventListener('click', async () => {
-    const code = codeInput.value.trim().toUpperCase();
+  verifyBtn.addEventListener("click", function(){
+    var code = codeInput.value.trim().toUpperCase();
     if (!code.match(/^TS-[A-Z0-9]{7}$/)) {
-      renderResult('error', '✕', 'Invalid Format',
-        'Codes must be in the format TS-XXXXXXX (7 characters after TS-).', null, null, null);
+      renderResult("error", "X", "Invalid Format",
+        "Codes must be in format TS-XXXXXXX (7 characters after TS-).", null, null, null);
       return;
     }
     verifyBtn.disabled = true;
-    verifyBtn.textContent = 'Verifying';
-    setProgress(50, 'Checking database');
-    await verifyCode(code, null);
-    verifyBtn.disabled = false;
-    verifyBtn.textContent = 'Verify Now';
+    verifyBtn.textContent = "Verifying";
+    setProgress(50, "Checking database");
+    verifyCode(code, null).then(function(){
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = "Verify Now";
+    });
   });
 
-  codeInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') verifyBtn.click();
+  codeInput.addEventListener("keypress", function(e){
+    if (e.key === "Enter") verifyBtn.click();
   });
 
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) scanImage(file).finally(() => { fileInput.value = ''; });
+  fileInput.addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if (file) {
+      scanImage(file);
+      setTimeout(function(){ fileInput.value = ""; }, 100);
+    }
   });
 
-  ['dragenter', 'dragover'].forEach(ev => {
-    dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.add('drag'); });
+  ["dragenter","dragover"].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.add("drag"); });
   });
-  ['dragleave', 'drop'].forEach(ev => {
-    dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.remove('drag'); });
+  ["dragleave","drop"].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.remove("drag"); });
   });
-  dropZone.addEventListener('drop', (e) => {
+  dropZone.addEventListener("drop", function(e){
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) scanImage(file);
+    var file = e.dataTransfer.files[0];
+    if (file && file.type.indexOf("image/") === 0) scanImage(file);
   });
 })();
 </script>
