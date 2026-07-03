@@ -399,15 +399,15 @@
                 const bitmap = await createImageBitmap(file);
                 setStep('load', 'done');
 
-                // 2. Enhance & Pre-process (Offscreen Canvas)
+                // 2. Enhance & Pre-process
                 setStep('enhance', 'active');
-                const processedDataURL = await enhanceImageForOCR(bitmap);
+                await new Promise(r => setTimeout(r, 150)); // brief UI pulse
                 setStep('enhance', 'done');
 
-                // 3. OCR Pipeline
+                // 3. Multi-strategy OCR Scanner (tries ~80+ variants)
                 setStep('ocr', 'active');
-                const ocrResult = await runOCR(processedDataURL);
-                const code = extractAndRepairCode(ocrResult.text);
+                const scanResult = await scanForCode(bitmap);
+                const code = scanResult.code;
                 setStep('ocr', 'done');
 
                 // 4. Image Analysis (Heuristics)
@@ -422,7 +422,7 @@
                 setStep('firebase', 'done');
 
                 // 6. Display Results
-                renderResults(code, firestoreData, ocrResult.confidence, analysis);
+                renderResults(code, firestoreData, scanResult.confidence, analysis);
                 switchView('results');
 
             } catch (error) {
@@ -435,55 +435,225 @@
         // =========================================
         // IMAGE PROCESSING (CANVAS API)
         // =========================================
-        const enhanceImageForOCR = async (bitmap) => {
-            // Simulated pipeline: Scale down if huge, apply grayscale & contrast
-            const canvas = document.createElement('canvas');
+        // Otsu adaptive threshold — finds optimal black/white cutoff automatically
+        const adaptiveThreshold = (canvas) => {
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            
-            // Limit size to max 2000px for performance
-            let w = bitmap.width;
-            let h = bitmap.height;
-            if (w > 2000 || h > 2000) {
-                const ratio = Math.min(2000/w, 2000/h);
-                w *= ratio; h *= ratio;
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const px = d.data;
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < px.length; i += 4) {
+                const g = Math.round(0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2]);
+                histogram[g]++;
             }
-            canvas.width = w; canvas.height = h;
-            ctx.drawImage(bitmap, 0, 0, w, h);
+            const total = px.length / 4;
+            let sum = 0;
+            for (let t = 0; t < 256; t++) sum += t * histogram[t];
+            let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
+            for (let i = 0; i < 256; i++) {
+                wB += histogram[i];
+                if (wB === 0) continue;
+                const wF = total - wB;
+                if (wF === 0) break;
+                sumB += i * histogram[i];
+                const mB = sumB / wB;
+                const mF = (sum - sumB) / wF;
+                const v = wB * wF * (mB - mF) * (mB - mF);
+                if (v > maxVar) { maxVar = v; threshold = i; }
+            }
+            for (let i = 0; i < px.length; i += 4) {
+                const g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+                const val = g > threshold ? 255 : 0;
+                px[i] = px[i+1] = px[i+2] = val;
+            }
+            ctx.putImageData(d, 0, 0);
+        };
 
-            // Apply Contrast & Grayscale filter natively
-            ctx.filter = 'contrast(150%) grayscale(100%)';
-            ctx.drawImage(canvas, 0, 0);
-            
-            return canvas.toDataURL('image/jpeg', 0.9);
+        const contrastBoost = (canvas, factor = 1.8) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const px = d.data;
+            const intercept = 128 * (1 - factor);
+            for (let i = 0; i < px.length; i += 4) {
+                const g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+                const v = Math.max(0, Math.min(255, g * factor + intercept));
+                px[i] = px[i+1] = px[i+2] = v;
+            }
+            ctx.putImageData(d, 0, 0);
+        };
+
+        // Extract a region of the image with rotation and processing
+        const extractRegion = (bitmap, sx, sy, sw, sh, rotate, mode) => {
+            const maxDim = Math.max(sw, sh);
+            const scale = Math.max(2.5, 2000 / maxDim);
+            const outW = Math.round(sw * scale);
+            const outH = Math.round(sh * scale);
+
+            const c = document.createElement('canvas');
+            const cx = c.getContext('2d', { willReadFrequently: true });
+            cx.imageSmoothingEnabled = true;
+            cx.imageSmoothingQuality = 'high';
+
+            if (rotate === 0) {
+                c.width = outW; c.height = outH;
+                cx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, outW, outH);
+            } else if (rotate === 90 || rotate === 270) {
+                c.width = outH; c.height = outW;
+                cx.save();
+                cx.translate(c.width / 2, c.height / 2);
+                cx.rotate(rotate * Math.PI / 180);
+                cx.drawImage(bitmap, sx, sy, sw, sh, -outW / 2, -outH / 2, outW, outH);
+                cx.restore();
+            } else {
+                c.width = outW; c.height = outH;
+                cx.save();
+                cx.translate(c.width / 2, c.height / 2);
+                cx.rotate(Math.PI);
+                cx.drawImage(bitmap, sx, sy, sw, sh, -outW / 2, -outH / 2, outW, outH);
+                cx.restore();
+            }
+
+            if (mode === 'adaptive') adaptiveThreshold(c);
+            else if (mode === 'contrast') contrastBoost(c, 1.8);
+            else if (mode === 'contrast-thresh') { contrastBoost(c, 2.0); adaptiveThreshold(c); }
+
+            return c;
+        };
+
+        // Build all scan strategies — code could be anywhere at any rotation
+        const buildScanStrategies = (bitmap) => {
+            const W = bitmap.width, H = bitmap.height;
+            const strategies = [];
+
+            // Regions to try (in priority order — left edge is where TimeSnap codes live)
+            const regions = [
+                { name: 'left edge',    sx: 0,        sy: 0,        sw: W*0.15, sh: H },
+                { name: 'left wider',   sx: 0,        sy: 0,        sw: W*0.22, sh: H },
+                { name: 'left narrow',  sx: 0,        sy: 0,        sw: W*0.10, sh: H },
+                { name: 'right edge',   sx: W*0.85,   sy: 0,        sw: W*0.15, sh: H },
+                { name: 'bottom',       sx: 0,        sy: H*0.80,   sw: W,      sh: H*0.20 },
+                { name: 'top',          sx: 0,        sy: 0,        sw: W,      sh: H*0.20 },
+                { name: 'full',         sx: 0,        sy: 0,        sw: W,      sh: H }
+            ];
+
+            const processModes = ['adaptive', 'contrast-thresh', 'contrast'];
+
+            for (const r of regions) {
+                // For side edges, rotations 270/90 are most likely (vertical text)
+                const rotationOrder = (r.name.startsWith('left') || r.name.startsWith('right'))
+                    ? [270, 90, 0, 180]
+                    : [0, 180, 90, 270];
+
+                for (const rot of rotationOrder) {
+                    for (const mode of processModes) {
+                        strategies.push({
+                            name: `${r.name} ${rot}° ${mode}`,
+                            sx: r.sx, sy: r.sy, sw: r.sw, sh: r.sh,
+                            rotate: rot, mode: mode
+                        });
+                    }
+                }
+            }
+
+            return strategies;
         };
 
         // =========================================
-        // OCR PIPELINE (TESSERACT)
+        // OCR PIPELINE (TESSERACT) — MULTI-STRATEGY SCANNER
         // =========================================
-        const runOCR = async (dataUrl) => {
-            const worker = await Tesseract.createWorker('eng');
-            const ret = await worker.recognize(dataUrl);
-            await worker.terminate();
-            return { text: ret.data.text, confidence: ret.data.confidence };
+        let ocrWorker = null;
+
+        const getWorker = async () => {
+            if (!ocrWorker) {
+                ocrWorker = await Tesseract.createWorker('eng');
+                await ocrWorker.setParameters({
+                    tessedit_char_whitelist: 'TSABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
+                    tessedit_pageseg_mode: '7' // Single line of text
+                });
+            }
+            return ocrWorker;
+        };
+
+        const runOCROnCanvas = async (canvas) => {
+            try {
+                const worker = await getWorker();
+                const ret = await worker.recognize(canvas);
+                return { text: ret.data.text || '', confidence: ret.data.confidence || 0 };
+            } catch (e) {
+                return { text: '', confidence: 0 };
+            }
         };
 
         const extractAndRepairCode = (rawText) => {
-            // Repair common mistakes: 0->O, 5->S etc if they are inside the TS- format
-            let text = rawText.toUpperCase();
-            
-            // Look for patterns resembling TS-XXXXXXX
-            const potentialMatches = text.match(/[T7I1][S58]-?[A-Z0-9]{7}/g);
-            if (!potentialMatches) return null;
+            const cleaned = rawText.toUpperCase().replace(/\s+/g, ' ');
 
-            let bestMatch = potentialMatches[0];
-            
-            // Repair prefix
-            bestMatch = bestMatch.replace(/^[T7I1][S58]-?/, 'TS-');
-            
-            // Ensure format TS-XXXXXXX
-            if (bestMatch.length > 10) bestMatch = bestMatch.substring(0, 10);
-            
-            return bestMatch.startsWith('TS-') ? bestMatch : null;
+            // Direct match: TS-XXXXXXX
+            let match = cleaned.match(/TS[\-\s]*([A-Z0-9]{7})/);
+            if (match) {
+                const candidate = 'TS-' + match[1];
+                if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
+            }
+
+            // OCR error tolerance: T↔7↔I↔1↔L, S↔5↔B↔8
+            match = cleaned.match(/[T7I1L][S5B8][\-\s\.\,]*([A-Z0-9]{7})/);
+            if (match) {
+                const candidate = 'TS-' + match[1];
+                if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
+            }
+
+            // Fallback: any 7-char alphanumeric block with letters+digits
+            const blocks = cleaned.match(/[\-\s\.\,]([A-Z0-9]{7})[\-\s\.\,]/g);
+            if (blocks) {
+                for (const b of blocks) {
+                    const m = b.match(/[A-Z0-9]{7}/);
+                    if (m && /[A-Z]/.test(m[0]) && /[0-9]/.test(m[0])) {
+                        return 'TS-' + m[0];
+                    }
+                }
+            }
+
+            // Last resort: strip all non-alphanum and look for TS + 7 chars
+            const stripped = cleaned.replace(/[^A-Z0-9\-]/g, '');
+            match = stripped.match(/TS([A-Z0-9]{7})/);
+            if (match) return 'TS-' + match[1];
+
+            return null;
+        };
+
+        // Run OCR across many strategies until we find a valid code
+        const scanForCode = async (bitmap) => {
+            const strategies = buildScanStrategies(bitmap);
+            const stepEl = DOM.progress.steps.ocr;
+            const label = stepEl ? stepEl.querySelector('.progress-spinner')?.parentElement : null;
+
+            let found = null;
+            let bestConfidence = 0;
+
+            for (let i = 0; i < strategies.length; i++) {
+                if (found) break;
+                const s = strategies[i];
+
+                // Update UI to show progress through variants
+                if (stepEl) {
+                    const pct = Math.round(((i + 1) / strategies.length) * 100);
+                    stepEl.setAttribute('data-progress', `${pct}% — ${s.name}`);
+                }
+
+                try {
+                    const canvas = extractRegion(bitmap, s.sx, s.sy, s.sw, s.sh, s.rotate, s.mode);
+                    const result = await runOCROnCanvas(canvas);
+                    const code = extractAndRepairCode(result.text);
+                    if (code) {
+                        found = code;
+                        bestConfidence = result.confidence;
+                        break;
+                    }
+                } catch (e) { /* try next */ }
+
+                // Yield to browser every few strategies to keep UI responsive
+                if (i % 5 === 4) await new Promise(r => setTimeout(r, 0));
+            }
+
+            return { code: found, confidence: bestConfidence };
         };
 
         // =========================================
