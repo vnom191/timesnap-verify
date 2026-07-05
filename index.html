@@ -253,6 +253,9 @@
                     <div id="statusBadge" class="status-badge status-verified">
                         <i class="fa-solid fa-circle-check"></i> Verified
                     </div>
+                    <button class="btn btn-primary" id="btnRetry" style="display: none; margin-top: 12px;">
+                        <i class="fa-solid fa-arrow-rotate-left"></i> Try Again
+                    </button>
                 </div>
                 <h3 id="resCode" style="font-family: monospace; color: var(--primary); letter-spacing: 2px;">TS-XXXXXXX</h3>
             </div>
@@ -337,7 +340,8 @@
             btns: {
                 share: document.getElementById('btnShare'),
                 maps: document.getElementById('btnMaps'),
-                reset: document.getElementById('btnReset')
+                reset: document.getElementById('btnReset'),
+                retry: document.getElementById('btnRetry')
             }
         };
 
@@ -392,7 +396,10 @@
         const handleFile = async (file) => {
             if (!file.type.startsWith('image/')) return alert("Please upload a valid image file.");
             switchView('progress');
-            
+
+            // Keep image URL for display in results (success or error)
+            const imageUrl = URL.createObjectURL(file);
+
             try {
                 // 1. Load Image
                 setStep('load', 'active');
@@ -404,7 +411,7 @@
                 await new Promise(r => setTimeout(r, 150)); // brief UI pulse
                 setStep('enhance', 'done');
 
-                // 3. Multi-strategy OCR Scanner (tries ~80+ variants)
+                // 3. Multi-strategy OCR Scanner (left-edge only, fast)
                 setStep('ocr', 'active');
                 const scanResult = await scanForCode(bitmap);
                 const code = scanResult.code;
@@ -417,17 +424,43 @@
 
                 // 5. Firebase Verification
                 setStep('firebase', 'active');
-                if (!code) throw new Error("CODE_NOT_FOUND");
-                const firestoreData = await verifyWithFirebase(code);
-                setStep('firebase', 'done');
 
-                // 6. Display Results
-                renderResults(code, firestoreData, scanResult.confidence, analysis);
-                switchView('results');
+                // Case A — no code found on the picture at all
+                if (!code) {
+                    renderError({
+                        type: 'CODE_NOT_FOUND',
+                        imageUrl: imageUrl,
+                        detectedCode: null
+                    });
+                    switchView('results');
+                    return;
+                }
+
+                // Try to look up the code — if not in DB, it's fake/tampered
+                try {
+                    const firestoreData = await verifyWithFirebase(code);
+                    setStep('firebase', 'done');
+                    // Case C — success
+                    renderResults(code, firestoreData, scanResult.confidence, analysis, imageUrl);
+                    switchView('results');
+                } catch (fbErr) {
+                    // Case B — code found on picture but NOT in database = tampered/fake
+                    renderError({
+                        type: 'TAMPERED',
+                        imageUrl: imageUrl,
+                        detectedCode: code
+                    });
+                    switchView('results');
+                }
 
             } catch (error) {
                 console.error("Pipeline Error:", error);
-                renderError(error.message);
+                renderError({
+                    type: 'UNKNOWN',
+                    imageUrl: imageUrl,
+                    detectedCode: null,
+                    message: error.message
+                });
                 switchView('results');
             }
         };
@@ -710,10 +743,20 @@
         // =========================================
         // UI RENDERING & MAP
         // =========================================
-        const renderResults = (code, dbData, ocrConf, analysis) => {
+        const renderResults = (code, dbData, ocrConf, analysis, imageUrl) => {
             DOM.results.badge.className = 'status-badge status-verified';
             DOM.results.badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verified';
-            
+
+            // Hide retry button, show share/maps buttons on success
+            DOM.btns.retry.style.display = 'none';
+            DOM.btns.share.style.display = '';
+            DOM.btns.maps.style.display = '';
+
+            // Reset map div (in case a prior error left custom content in it)
+            const mapDiv = document.getElementById('map');
+            mapDiv.innerHTML = '';
+            mapDiv.style.height = '';
+
             DOM.results.code.textContent = escapeHTML(code);
             DOM.results.time.textContent = escapeHTML(new Date(dbData.timestamp?.toDate() || Date.now()).toLocaleString());
             DOM.results.source.textContent = escapeHTML(dbData.timeSource || 'Internet (NTP)');
@@ -732,20 +775,80 @@
             initMap(lat, lng);
         };
 
-        const renderError = (msg) => {
-            DOM.results.badge.className = 'status-badge status-error';
-            DOM.results.badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error';
-            DOM.results.code.textContent = "VERIFICATION FAILED";
-            DOM.results.time.textContent = "--";
-            DOM.results.source.textContent = "--";
-            DOM.results.media.textContent = "--";
-            DOM.results.coords.textContent = "--";
-            DOM.results.integrity.textContent = msg === "CODE_NOT_FOUND" ? "No Code Found" : "N/A";
-            DOM.results.ai.textContent = "N/A";
-            DOM.results.ocr.textContent = "Failed";
-            
-            if(mapInstance) { mapInstance.remove(); mapInstance = null; }
-            document.getElementById('map').innerHTML = `<div style="padding:24px; text-align:center; color:var(--text-muted)">Map unavailable due to error.</div>`;
+        // Render error with 3 specific outcomes:
+        //   TAMPERED       — code was read but not in database (fake/edited)
+        //   CODE_NOT_FOUND — no code detected on the picture at all
+        //   UNKNOWN        — other pipeline errors
+        const renderError = (err) => {
+            const type = err.type || 'UNKNOWN';
+
+            let badgeClass, badgeIcon, badgeText, codeText, integrityText, subMsg;
+
+            if (type === 'TAMPERED') {
+                badgeClass = 'status-error';
+                badgeIcon = 'fa-shield-halved';
+                badgeText = 'Tampered / Fake';
+                codeText = err.detectedCode || 'DETECTED CODE';
+                integrityText = 'Failed — code not in database';
+                subMsg = 'A code was found on this image but it does not match any record in our verification database. This photo has likely been tampered with, edited, or was not created by TimeSnap.';
+            } else if (type === 'CODE_NOT_FOUND') {
+                badgeClass = 'status-error';
+                badgeIcon = 'fa-magnifying-glass';
+                badgeText = 'Code Not Found';
+                codeText = '— NO CODE —';
+                integrityText = 'No TimeSnap code detected';
+                subMsg = 'No TimeSnap verification code could be read from the left edge of this picture. The image may not be a TimeSnap capture, or the code area may be cropped, blurred, or damaged.';
+            } else {
+                badgeClass = 'status-error';
+                badgeIcon = 'fa-triangle-exclamation';
+                badgeText = 'Verification Failed';
+                codeText = 'ERROR';
+                integrityText = 'N/A';
+                subMsg = err.message || 'An unexpected error occurred during verification.';
+            }
+
+            DOM.results.badge.className = 'status-badge ' + badgeClass;
+            DOM.results.badge.innerHTML = '<i class="fa-solid ' + badgeIcon + '"></i> ' + badgeText;
+            DOM.results.code.textContent = codeText;
+            DOM.results.time.textContent = '--';
+            DOM.results.source.textContent = '--';
+            DOM.results.media.textContent = '--';
+            DOM.results.coords.textContent = '--';
+            DOM.results.integrity.textContent = integrityText;
+            DOM.results.ai.textContent = 'N/A';
+            DOM.results.ocr.textContent = type === 'TAMPERED' ? 'Read OK' : 'Failed';
+
+            // Show retry button at TOP under badge, hide bottom action buttons
+            DOM.btns.retry.style.display = '';
+            DOM.btns.share.style.display = 'none';
+            DOM.btns.maps.style.display = 'none';
+
+            // Replace the map area with the uploaded image + explanation
+            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+            const mapDiv = document.getElementById('map');
+            mapDiv.innerHTML = '';
+            mapDiv.style.height = 'auto';
+
+            const box = document.createElement('div');
+            box.style.cssText = 'display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;';
+
+            if (err.imageUrl) {
+                const imgWrap = document.createElement('div');
+                imgWrap.style.cssText = 'width:100%; max-height:360px; overflow:hidden; border-radius:8px; display:flex; justify-content:center; background:#000;';
+                const img = document.createElement('img');
+                img.src = err.imageUrl;
+                img.style.cssText = 'max-width:100%; max-height:360px; object-fit:contain;';
+                img.alt = 'Uploaded picture';
+                imgWrap.appendChild(img);
+                box.appendChild(imgWrap);
+            }
+
+            const msg = document.createElement('div');
+            msg.style.cssText = 'color:var(--text-muted); font-size:0.9rem; line-height:1.5;';
+            msg.textContent = subMsg;
+            box.appendChild(msg);
+
+            mapDiv.appendChild(box);
         };
 
         const initMap = (lat, lng) => {
@@ -771,6 +874,13 @@
         DOM.btns.reset.addEventListener('click', () => {
             DOM.fileInput.value = '';
             // Reset steps UI
+            Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
+            switchView('upload');
+        });
+
+        // Retry button (shown on error, right under status badge) — same as reset
+        DOM.btns.retry.addEventListener('click', () => {
+            DOM.fileInput.value = '';
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
         });
