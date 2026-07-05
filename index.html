@@ -481,10 +481,15 @@
             ctx.putImageData(d, 0, 0);
         };
 
-        // Extract a region of the image with rotation and processing
+        // Extract a region of the image with rotation and processing.
+        // Narrow strips get aggressive upscaling because OCR needs
+        // at least ~30 pixels of character height to work reliably.
         const extractRegion = (bitmap, sx, sy, sw, sh, rotate, mode) => {
-            const maxDim = Math.max(sw, sh);
-            const scale = Math.max(2.5, 2000 / maxDim);
+            // After rotating 90/270, the strip's SHORT dimension (sw)
+            // becomes the HEIGHT of the horizontal image sent to OCR.
+            // We need at least 60px tall for reliable OCR — upscale hard.
+            const targetShortSide = 120;
+            const scale = Math.max(3, targetShortSide / sw);
             const outW = Math.round(sw * scale);
             const outH = Math.round(sh * scale);
 
@@ -519,36 +524,39 @@
             return c;
         };
 
-        // Build all scan strategies — code could be anywhere at any rotation
+        // Build scan strategies — LEFT EDGE ONLY, code reads bottom-to-top
+        // Rotate 270° so bottom-to-top vertical text becomes left-to-right horizontal
         const buildScanStrategies = (bitmap) => {
             const W = bitmap.width, H = bitmap.height;
             const strategies = [];
 
-            // Regions to try (in priority order — left edge is where TimeSnap codes live)
-            const regions = [
-                { name: 'left edge',    sx: 0,        sy: 0,        sw: W*0.15, sh: H },
-                { name: 'left wider',   sx: 0,        sy: 0,        sw: W*0.22, sh: H },
-                { name: 'left narrow',  sx: 0,        sy: 0,        sw: W*0.10, sh: H },
-                { name: 'right edge',   sx: W*0.85,   sy: 0,        sw: W*0.15, sh: H },
-                { name: 'bottom',       sx: 0,        sy: H*0.80,   sw: W,      sh: H*0.20 },
-                { name: 'top',          sx: 0,        sy: 0,        sw: W,      sh: H*0.20 },
-                { name: 'full',         sx: 0,        sy: 0,        sw: W,      sh: H }
+            // Left edge widths to try (in order — narrowest is most accurate)
+            // Code sits at very left edge, ~8-12% of image width
+            const widths = [
+                { name: 'left 10%',  ratio: 0.10 },
+                { name: 'left 8%',   ratio: 0.08 },
+                { name: 'left 13%',  ratio: 0.13 },
+                { name: 'left 6%',   ratio: 0.06 },
+                { name: 'left 18%',  ratio: 0.18 }
             ];
 
-            const processModes = ['adaptive', 'contrast-thresh', 'contrast'];
+            // Processing modes (best first)
+            const modes = ['adaptive', 'contrast-thresh', 'contrast'];
 
-            for (const r of regions) {
-                // For side edges, rotations 270/90 are most likely (vertical text)
-                const rotationOrder = (r.name.startsWith('left') || r.name.startsWith('right'))
-                    ? [270, 90, 0, 180]
-                    : [0, 180, 90, 270];
+            // Rotation 270 is the primary orientation (bottom-to-top → left-to-right)
+            // 90 is fallback if user pasted rotated image
+            const rotations = [270, 90];
 
-                for (const rot of rotationOrder) {
-                    for (const mode of processModes) {
+            for (const rot of rotations) {
+                for (const w of widths) {
+                    for (const mode of modes) {
                         strategies.push({
-                            name: `${r.name} ${rot}° ${mode}`,
-                            sx: r.sx, sy: r.sy, sw: r.sw, sh: r.sh,
-                            rotate: rot, mode: mode
+                            name: `${w.name} @ ${rot}° ${mode}`,
+                            sx: 0, sy: 0,
+                            sw: Math.max(60, W * w.ratio),
+                            sh: H,
+                            rotate: rot,
+                            mode: mode
                         });
                     }
                 }
@@ -566,8 +574,12 @@
             if (!ocrWorker) {
                 ocrWorker = await Tesseract.createWorker('eng');
                 await ocrWorker.setParameters({
-                    tessedit_char_whitelist: 'TSABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
-                    tessedit_pageseg_mode: '7' // Single line of text
+                    // Allow full alphabet + digits + dash + space + dot (for TIMESNAP.INFO)
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- .',
+                    // PSM 7 = treat as a single line of text (fits the rotated strip perfectly)
+                    tessedit_pageseg_mode: '7',
+                    // Preserve interword spaces so the regex can find TS-XXXXXXX cleanly
+                    preserve_interword_spaces: '1'
                 });
             }
             return ocrWorker;
@@ -583,25 +595,43 @@
             }
         };
 
+        // The burn format on the picture is: "TS-XXXXXXX • Verify at TIMESNAP.INFO"
+        // Codes are 7 chars from the safe alphabet: ABCDEFGHJKLMNPQRSTUVWXYZ23456789
+        // (no I/O/0/1 to avoid confusion, so OCR misreads are less ambiguous)
         const extractAndRepairCode = (rawText) => {
             const cleaned = rawText.toUpperCase().replace(/\s+/g, ' ');
 
-            // Direct match: TS-XXXXXXX
-            let match = cleaned.match(/TS[\-\s]*([A-Z0-9]{7})/);
+            // Pattern 1: exact TS-XXXXXXX
+            let match = cleaned.match(/TS[\-\s]?([A-Z0-9]{7})/);
             if (match) {
                 const candidate = 'TS-' + match[1];
                 if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
             }
 
-            // OCR error tolerance: T↔7↔I↔1↔L, S↔5↔B↔8
-            match = cleaned.match(/[T7I1L][S5B8][\-\s\.\,]*([A-Z0-9]{7})/);
+            // Pattern 2: T + OCR-confused-S + 7 chars
+            //   S is often read as 5, 8, or B
+            match = cleaned.match(/T[S58B][\-\s\.]?([A-Z0-9]{7})/);
             if (match) {
                 const candidate = 'TS-' + match[1];
                 if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
             }
 
-            // Fallback: any 7-char alphanumeric block with letters+digits
-            const blocks = cleaned.match(/[\-\s\.\,]([A-Z0-9]{7})[\-\s\.\,]/g);
+            // Pattern 3: OCR-confused-T + S + 7 chars
+            //   T is often read as 7, I, 1, or L
+            match = cleaned.match(/[7IL1][S58B][\-\s\.]?([A-Z0-9]{7})/);
+            if (match) {
+                const candidate = 'TS-' + match[1];
+                if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
+            }
+
+            // Pattern 4: strip all non-alphanumeric and look for TS followed by 7
+            const stripped = cleaned.replace(/[^A-Z0-9]/g, '');
+            match = stripped.match(/TS([A-Z0-9]{7})/);
+            if (match) return 'TS-' + match[1];
+
+            // Pattern 5: last resort — any 7-char block sitting between separators
+            // that contains both letters AND digits (real codes always mix)
+            const blocks = cleaned.match(/(?:^|[\s\-\.])([A-Z0-9]{7})(?=[\s\-\.]|$)/g);
             if (blocks) {
                 for (const b of blocks) {
                     const m = b.match(/[A-Z0-9]{7}/);
@@ -610,11 +640,6 @@
                     }
                 }
             }
-
-            // Last resort: strip all non-alphanum and look for TS + 7 chars
-            const stripped = cleaned.replace(/[^A-Z0-9\-]/g, '');
-            match = stripped.match(/TS([A-Z0-9]{7})/);
-            if (match) return 'TS-' + match[1];
 
             return null;
         };
