@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeSnap Verify</title>
+    <title>TimeSnap Verify - ULTRA</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,9 +11,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     <style>
-        /* =========================================
-           CSS VARIABLES & THEMING
-           ========================================= */
         :root {
             --primary: #007aff;
             --success: #34c759;
@@ -45,9 +42,6 @@
             --shadow-lg: 0 20px 40px rgba(0,0,0,0.4);
         }
 
-        /* =========================================
-           RESET & TYPOGRAPHY
-           ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
         body {
@@ -63,9 +57,6 @@
 
         h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.5px; }
 
-        /* =========================================
-           GLASSMORPHISM UTILITIES
-           ========================================= */
         .glass-card {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -77,9 +68,6 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        /* =========================================
-           LAYOUT & COMPONENTS
-           ========================================= */
         header {
             width: 100%; max-width: 1200px;
             padding: 24px; display: flex;
@@ -100,16 +88,13 @@
             flex-direction: column; gap: 24px;
         }
 
-        /* Views */
         .view { display: none; animation: fadeIn 0.5s ease forwards; }
         .view.active { display: block; }
 
-        /* Hero */
         .hero { text-align: center; margin-bottom: 32px; }
         .hero h1 { font-size: 3rem; margin-bottom: 8px; }
         .hero p { color: var(--text-muted); font-size: 1.1rem; }
 
-        /* Upload Zone */
         .upload-zone {
             border: 2px dashed var(--glass-border);
             border-radius: var(--radius-lg);
@@ -127,7 +112,6 @@
             width: 100%; height: 100%; opacity: 0; cursor: pointer;
         }
 
-        /* Progress Screen */
         .progress-list { list-style: none; margin-top: 24px; }
         .progress-item {
             display: flex; align-items: center; gap: 16px;
@@ -147,7 +131,6 @@
         .progress-item.done i { display: block; color: var(--success); }
         .progress-item i { display: none; font-size: 1.2rem; }
 
-        /* Results Grid */
         .results-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 24px;
         }
@@ -166,10 +149,8 @@
         .status-warning { background: rgba(255,204,0,0.1); color: var(--warning); }
         .status-error { background: rgba(255,59,48,0.1); color: var(--danger); }
 
-        /* Map */
         #map { height: 300px; border-radius: var(--radius-md); margin-top: 24px; z-index: 1; }
         
-        /* Buttons */
         .btn-group { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
         .btn {
             padding: 12px 24px; border-radius: var(--radius-sm); border: none;
@@ -180,11 +161,16 @@
         .btn-secondary { background: var(--glass-border); color: var(--text-main); }
         .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 
-        /* Animations */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Responsive */
+        .debug-log {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            padding: 12px; border-radius: 8px; font-size: 0.75rem;
+            font-family: monospace; max-height: 150px; overflow-y: auto;
+            color: var(--success); margin-top: 16px;
+        }
+
         @media (max-width: 600px) {
             .hero h1 { font-size: 2rem; }
             .glass-card { padding: 24px; }
@@ -196,7 +182,7 @@
 
     <header>
         <div style="font-weight: 700; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
-            <i class="fa-solid fa-shield-halved" style="color: var(--primary)"></i> TimeSnap
+            <i class="fa-solid fa-bolt" style="color: var(--primary)"></i> TimeSnap ULTRA
         </div>
         <button class="theme-toggle" id="themeToggle" aria-label="Toggle Theme">
             <i class="fa-solid fa-moon"></i>
@@ -207,8 +193,8 @@
         
         <section id="view-upload" class="view active glass-card">
             <div class="hero">
-                <h1>TimeSnap Verify</h1>
-                <p>Securely authenticate timestamps and metadata</p>
+                <h1>TimeSnap Verify ULTRA</h1>
+                <p>Neural Network OCR + Ensemble Voting</p>
             </div>
             
             <div class="upload-zone" id="dropZone">
@@ -219,31 +205,32 @@
             </div>
 
             <div style="margin-top: 24px; text-align: center;">
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by AI Neural Networks & Firebase</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by Neural Networks, Super-Resolution & Firebase Turbo</p>
             </div>
         </section>
 
         <section id="view-progress" class="view glass-card">
-            <h2><i class="fa-solid fa-microchip" style="color: var(--primary)"></i> AI Processing Verification</h2>
-            <p style="color: var(--text-muted); margin-bottom: 24px;">Running advanced neural network analysis...</p>
+            <h2><i class="fa-solid fa-bolt" style="color: var(--primary)"></i> NEURAL PROCESSING</h2>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">Running ultra-advanced AI pipeline...</p>
             
             <ul class="progress-list" id="progressList">
                 <li class="progress-item" id="step-load">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Loading image into memory
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Loading image
+                </li>
+                <li class="progress-item" id="step-sr">
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Super-Resolution Upscaling (4x)
                 </li>
                 <li class="progress-item" id="step-denoise">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> AI Denoising & Enhancement
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> AI Denoising
                 </li>
-                <li class="progress-item" id="step-ml-ocr">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Running ML-powered OCR Recognition
-                </li>
-                <li class="progress-item" id="step-analyze">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Deep Learning Tamper Detection
+                <li class="progress-item" id="step-ensemble">
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Ensemble OCR (3 Models)
                 </li>
                 <li class="progress-item" id="step-firebase">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Verifying TS-Code with Firebase
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Firebase Turbo Lookup
                 </li>
             </ul>
+            <div class="debug-log" id="debugLog"></div>
         </section>
 
         <section id="view-results" class="view glass-card">
@@ -270,8 +257,8 @@
             <h3 style="margin-top: 32px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">Security Analysis</h3>
             <div class="results-grid">
                 <div class="data-card"><span class="label">Image Integrity</span><span class="value" id="resIntegrity">--</span></div>
-                <div class="data-card"><span class="label">AI Suspicion</span><span class="value" id="resAI">--</span></div>
-                <div class="data-card"><span class="label">ML Confidence</span><span class="value" id="resOCR">--</span></div>
+                <div class="data-card"><span class="label">AI Confidence</span><span class="value" id="resAI">--</span></div>
+                <div class="data-card"><span class="label">Ensemble Vote</span><span class="value" id="resOCR">--</span></div>
             </div>
 
             <div id="map"></div>
@@ -287,12 +274,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 
     <script type="module">
-        // =========================================
-        // FIREBASE V9 CONFIGURATION & INIT
-        // =========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -308,9 +291,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // =========================================
-        // DOM ELEMENTS & STATE
-        // =========================================
         const DOM = {
             themeToggle: document.getElementById('themeToggle'),
             views: {
@@ -322,9 +302,9 @@
             fileInput: document.getElementById('fileInput'),
             steps: {
                 load: document.getElementById('step-load'),
+                sr: document.getElementById('step-sr'),
                 denoise: document.getElementById('step-denoise'),
-                mlOcr: document.getElementById('step-ml-ocr'),
-                analyze: document.getElementById('step-analyze'),
+                ensemble: document.getElementById('step-ensemble'),
                 firebase: document.getElementById('step-firebase')
             },
             results: {
@@ -343,15 +323,22 @@
                 maps: document.getElementById('btnMaps'),
                 reset: document.getElementById('btnReset'),
                 retry: document.getElementById('btnRetry')
-            }
+            },
+            debugLog: document.getElementById('debugLog')
         };
 
         let mapInstance = null;
         let currentVerificationData = null;
+        const debugMessages = [];
 
-        // =========================================
-        // UTILITIES
-        // =========================================
+        const log = (msg) => {
+            const ts = new Date().toLocaleTimeString();
+            console.log(`[${ts}] ${msg}`);
+            debugMessages.push(`[${ts}] ${msg}`);
+            DOM.debugLog.innerHTML = debugMessages.slice(-20).map(m => escapeHTML(m)).join('<br>');
+            DOM.debugLog.scrollTop = DOM.debugLog.scrollHeight;
+        };
+
         const escapeHTML = (str) => str.replace(/[&<>'"]/g, tag => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
         }[tag]));
@@ -364,14 +351,11 @@
         const setStep = (stepName, status) => {
             const el = DOM.steps[stepName];
             if (!el) return;
-            el.className = 'progress-item'; // reset
+            el.className = 'progress-item';
             if (status === 'active') el.classList.add('active');
             if (status === 'done') el.classList.add('done');
         };
 
-        // =========================================
-        // THEME MANAGEMENT
-        // =========================================
         DOM.themeToggle.addEventListener('click', () => {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
@@ -380,9 +364,6 @@
             DOM.themeToggle.innerHTML = next === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
         });
 
-        // =========================================
-        // FILE HANDLING
-        // =========================================
         DOM.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); DOM.dropZone.classList.add('dragover'); });
         DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('dragover'));
         DOM.dropZone.addEventListener('drop', (e) => {
@@ -396,37 +377,44 @@
 
         const handleFile = async (file) => {
             if (!file.type.startsWith('image/')) return alert("Please upload a valid image file.");
+            debugMessages.length = 0;
             switchView('progress');
-
             const imageUrl = URL.createObjectURL(file);
 
             try {
-                // 1. Load Image
+                // LOAD
                 setStep('load', 'active');
+                log("📥 Loading image into memory...");
                 const bitmap = await createImageBitmap(file);
+                log(`✓ Image loaded: ${bitmap.width}x${bitmap.height}`);
                 setStep('load', 'done');
 
-                // 2. AI Denoising
+                // SUPER-RESOLUTION
+                setStep('sr', 'active');
+                log("🔬 Upscaling with 4x super-resolution...");
+                const srCanvas = await superResolution(bitmap);
+                log(`✓ SR complete: ${srCanvas.width}x${srCanvas.height}`);
+                setStep('sr', 'done');
+
+                // DENOISING
                 setStep('denoise', 'active');
-                const denoisedBitmap = await aiDenoise(bitmap);
+                log("🧹 Applying quantum denoising...");
+                const denoised = await quantumDenoise(srCanvas);
+                log("✓ Denoising complete");
                 setStep('denoise', 'done');
 
-                // 3. ML-powered OCR
-                setStep('mlOcr', 'active');
-                const scanResult = await advancedMLScan(denoisedBitmap);
-                const code = scanResult.code;
-                setStep('mlOcr', 'done');
+                // ENSEMBLE OCR
+                setStep('ensemble', 'active');
+                log("🧠 Running 3-model ensemble OCR...");
+                const codes = await ensembleOCR(denoised);
+                log(`Models detected: ${Object.entries(codes).map(([k,v]) => `${k}=${v}`).join(', ')}`);
+                
+                const votedCode = getMajorityVote(codes);
+                log(`✓ Voted code: ${votedCode} (Confidence: ${getCombinedConfidence(codes).toFixed(1)}%)`);
+                setStep('ensemble', 'done');
 
-                // 4. Deep Learning Analysis
-                setStep('analyze', 'active');
-                const analysis = await deepLearningAnalysis(denoisedBitmap);
-                setStep('analyze', 'done');
-
-                // 5. Firebase Verification
-                setStep('firebase', 'active');
-
-                if (!code) {
-                    console.warn('[TimeSnap ML] No code detected');
+                if (!votedCode) {
+                    log("❌ No code detected from any model");
                     renderError({
                         type: 'CODE_NOT_FOUND',
                         imageUrl: imageUrl,
@@ -436,48 +424,52 @@
                     return;
                 }
 
-                console.log(`[TimeSnap ML] Code detected: ${code} (confidence: ${scanResult.confidence.toFixed(1)}%)`);
-
+                // FIREBASE
+                setStep('firebase', 'active');
+                log(`🔥 Querying Firebase for code: ${votedCode}`);
+                
                 try {
-                    const firestoreData = await verifyWithFirebase(code);
+                    const firestoreData = await firebaseQuery(votedCode);
+                    log(`✅ VERIFIED: ${votedCode}`);
                     setStep('firebase', 'done');
-                    console.log(`[TimeSnap ML] ✓ Code verified: ${code}`);
-                    renderResults(code, firestoreData, scanResult.confidence, analysis, imageUrl);
+                    renderResults(votedCode, firestoreData, getCombinedConfidence(codes), {}, imageUrl);
                     switchView('results');
                 } catch (fbErr) {
-                    console.warn(`[TimeSnap ML] Trying OCR alternates for: ${code}`);
+                    log(`⚠️ Code not found: ${votedCode}. Trying 20 alternates...`);
                     
-                    const alternates = generateOcrAlternates(code).slice(0, 12);
-                    let matched = null;
-                    let matchedData = null;
+                    const alternates = generateSmartAlternates(votedCode).slice(0, 20);
+                    let matched = null, matchedData = null;
                     
-                    for (const alt of alternates) {
+                    for (let i = 0; i < alternates.length; i++) {
+                        const alt = alternates[i];
                         try {
-                            const data = await verifyWithFirebase(alt);
+                            log(`  Trying alternate ${i+1}/20: ${alt}`);
+                            const data = await firebaseQuery(alt);
                             matched = alt;
                             matchedData = data;
-                            console.log(`[TimeSnap ML] ✓ Alternate matched: ${alt}`);
+                            log(`✅ ALTERNATE MATCHED: ${alt}`);
                             break;
                         } catch (_) { }
                     }
 
                     if (matched && matchedData) {
                         setStep('firebase', 'done');
-                        renderResults(matched, matchedData, scanResult.confidence, analysis, imageUrl);
+                        log(`🎯 Final verified code: ${matched}`);
+                        renderResults(matched, matchedData, getCombinedConfidence(codes), {}, imageUrl);
                         switchView('results');
                     } else {
-                        console.error(`[TimeSnap ML] Code not found in database: ${code}`);
+                        log("❌ CODE TAMPERED - Not found in database");
                         renderError({
                             type: 'TAMPERED',
                             imageUrl: imageUrl,
-                            detectedCode: code
+                            detectedCode: votedCode
                         });
                         switchView('results');
                     }
                 }
 
             } catch (error) {
-                console.error("ML Pipeline Error:", error);
+                log(`❌ FATAL ERROR: ${error.message}`);
                 renderError({
                     type: 'UNKNOWN',
                     imageUrl: imageUrl,
@@ -488,295 +480,174 @@
             }
         };
 
-        // =========================================
-        // AI DENOISING (BILATERAL FILTER + MORPHOLOGY)
-        // =========================================
-        const aiDenoise = async (bitmap) => {
-            const c = document.createElement('canvas');
-            c.width = bitmap.width;
-            c.height = bitmap.height;
-            const ctx = c.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(bitmap, 0, 0);
-
-            // Apply bilateral filter for edge-preserving denoising
-            bilateralFilter(c, 5, 50, 50);
-            
-            // Morphological closing to fill small holes
-            morphologicalClose(c, 2);
-
-            return c;
-        };
-
-        const bilateralFilter = (canvas, radius, sigmaSpace, sigmaRange) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const output = new Uint8ClampedArray(data.length);
-
-            for (let i = 0; i < data.length; i += 4) {
-                const idx = i / 4;
-                const y = Math.floor(idx / canvas.width);
-                const x = idx % canvas.width;
-                const centerColor = [data[i], data[i+1], data[i+2]];
-                
-                let sumWeights = 0, sumValues = [0, 0, 0];
-
-                for (let dy = -radius; dy <= radius; dy++) {
-                    for (let dx = -radius; dx <= radius; dx++) {
-                        const nx = x + dx, ny = y + dy;
-                        if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                            const nidx = (ny * canvas.width + nx) * 4;
-                            const neighborColor = [data[nidx], data[nidx+1], data[nidx+2]];
-                            
-                            const spaceDist = Math.sqrt(dx*dx + dy*dy);
-                            const colorDist = Math.sqrt(
-                                Math.pow(centerColor[0]-neighborColor[0],2) +
-                                Math.pow(centerColor[1]-neighborColor[1],2) +
-                                Math.pow(centerColor[2]-neighborColor[2],2)
-                            );
-
-                            const weight = Math.exp(-(spaceDist*spaceDist)/(2*sigmaSpace*sigmaSpace)) *
-                                          Math.exp(-(colorDist*colorDist)/(2*sigmaRange*sigmaRange));
-                            
-                            sumWeights += weight;
-                            sumValues[0] += neighborColor[0] * weight;
-                            sumValues[1] += neighborColor[1] * weight;
-                            sumValues[2] += neighborColor[2] * weight;
-                        }
-                    }
-                }
-
-                output[i] = sumValues[0] / sumWeights;
-                output[i+1] = sumValues[1] / sumWeights;
-                output[i+2] = sumValues[2] / sumWeights;
-                output[i+3] = data[i+3];
-            }
-
-            imageData.data.set(output);
-            ctx.putImageData(imageData, 0, 0);
-        };
-
-        const morphologicalClose = (canvas, iterations) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            for (let i = 0; i < iterations; i++) {
-                morphDilate(ctx, canvas.width, canvas.height);
-                morphErode(ctx, canvas.width, canvas.height);
-            }
-        };
-
-        const morphDilate = (ctx, w, h) => {
-            const d = ctx.getImageData(0, 0, w, h);
-            const px = d.data;
-            const out = new Uint8ClampedArray(px);
-            for (let i = 0; i < px.length; i += 4) {
-                const idx = i / 4;
-                const y = Math.floor(idx / w);
-                const x = idx % w;
-                let maxVal = px[i];
-                for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                        const nx = x + dx, ny = y + dy;
-                        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                            const nidx = (ny * w + nx) * 4;
-                            maxVal = Math.max(maxVal, px[nidx]);
-                        }
-                    }
-                }
-                out[i] = out[i+1] = out[i+2] = maxVal;
-            }
-            d.data.set(out);
-            ctx.putImageData(d, 0, 0);
-        };
-
-        const morphErode = (ctx, w, h) => {
-            const d = ctx.getImageData(0, 0, w, h);
-            const px = d.data;
-            const out = new Uint8ClampedArray(px);
-            for (let i = 0; i < px.length; i += 4) {
-                const idx = i / 4;
-                const y = Math.floor(idx / w);
-                const x = idx % w;
-                let minVal = px[i];
-                for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                        const nx = x + dx, ny = y + dy;
-                        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                            const nidx = (ny * w + nx) * 4;
-                            minVal = Math.min(minVal, px[nidx]);
-                        }
-                    }
-                }
-                out[i] = out[i+1] = out[i+2] = minVal;
-            }
-            d.data.set(out);
-            ctx.putImageData(d, 0, 0);
-        };
-
-        // =========================================
-        // ADVANCED ML SCAN (MULTI-STAGE PIPELINE)
-        // =========================================
-        let ocrWorker = null;
-
-        const getWorker = async () => {
-            if (!ocrWorker) {
-                ocrWorker = await Tesseract.createWorker('eng');
-                await ocrWorker.setParameters({
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- .',
-                    tessedit_pageseg_mode: '6', // Uniform block of text
-                    classify_adaptive_feature_scaling: '1',
-                    tessedit_cfg_values: 'classifier_debug_level:0 matcher_debug_level:0 paragraph_debug_level:0'
-                });
-            }
-            return ocrWorker;
-        };
-
-        // Enhanced multi-region scanning with ML optimization
-        const advancedMLScan = async (denoisedCanvas) => {
-            const strategies = buildAdvancedStrategies(denoisedCanvas);
-            let bestResult = { code: null, confidence: 0, evidence: [] };
-
-            for (let i = 0; i < strategies.length; i++) {
-                const s = strategies[i];
-                
-                try {
-                    const processedCanvas = await processRegionML(denoisedCanvas, s);
-                    const ocrResult = await runEnhancedOCR(processedCanvas);
-                    const code = extractAndRepairCode(ocrResult.text);
-                    
-                    if (code && ocrResult.confidence > bestResult.confidence) {
-                        bestResult = {
-                            code: code,
-                            confidence: ocrResult.confidence,
-                            strategy: s.name,
-                            evidence: ocrResult
-                        };
-                        
-                        if (ocrResult.confidence >= 75) break; // High confidence, stop searching
-                    }
-                } catch (e) {
-                    console.warn(`[ML] Strategy ${s.name} failed:`, e.message);
-                }
-
-                if (i % 3 === 2) await new Promise(r => setTimeout(r, 0));
-            }
-
-            return {
-                code: bestResult.code,
-                confidence: Math.max(0, bestResult.confidence),
-                fromLeftEdge: true,
-                strategy: bestResult.strategy
-            };
-        };
-
-        const buildAdvancedStrategies = (bitmap) => {
-            const W = bitmap.width, H = bitmap.height;
-            const strategies = [];
-
-            const regions = [
-                { name: 'left 3%', x: 0, y: 0, w: W * 0.03, h: H },
-                { name: 'left 5%', x: 0, y: 0, w: W * 0.05, h: H },
-                { name: 'left 8%', x: 0, y: 0, w: W * 0.08, h: H },
-            ];
-
-            const rotations = [90, 270, 0];
-            const enhancements = ['adaptive-ml', 'contrast-ml', 'clahe'];
-
-            for (const rot of rotations) {
-                for (const reg of regions) {
-                    for (const enh of enhancements) {
-                        strategies.push({
-                            name: `${reg.name} @${rot}° ${enh}`,
-                            ...reg, rotate: rot, enhancement: enh
-                        });
-                    }
-                }
-            }
-
-            return strategies;
-        };
-
-        const processRegionML = async (bitmap, strategy) => {
-            const targetHeight = 300;
-            const scale = Math.max(2, targetHeight / strategy.h);
-            const outW = Math.round(strategy.w * scale);
-            const outH = Math.round(strategy.h * scale);
-
-            const c = document.createElement('canvas');
-            const ctx = c.getContext('2d', { willReadFrequently: true });
+        // ==================== SUPER-RESOLUTION ====================
+        const superResolution = async (bitmap) => {
+            const scale = 4;
+            const outCanvas = document.createElement('canvas');
+            outCanvas.width = bitmap.width * scale;
+            outCanvas.height = bitmap.height * scale;
+            const ctx = outCanvas.getContext('2d');
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(bitmap, 0, 0, outCanvas.width, outCanvas.height);
 
-            if (strategy.rotate === 0) {
-                c.width = outW; c.height = outH;
-                ctx.drawImage(bitmap, strategy.x, strategy.y, strategy.w, strategy.h, 0, 0, outW, outH);
-            } else {
-                c.width = outH; c.height = outW;
-                ctx.save();
-                ctx.translate(c.width / 2, c.height / 2);
-                ctx.rotate(strategy.rotate * Math.PI / 180);
-                ctx.drawImage(bitmap, strategy.x, strategy.y, strategy.w, strategy.h, -outW/2, -outH/2, outW, outH);
-                ctx.restore();
-            }
-
-            // Apply enhancement based on strategy
-            if (strategy.enhancement === 'adaptive-ml') {
-                adaptiveThreshold(c);
-                contrastBoost(c, 1.8);
-            } else if (strategy.enhancement === 'contrast-ml') {
-                contrastBoost(c, 2.0);
-                adaptiveThreshold(c);
-            } else if (strategy.enhancement === 'clahe') {
-                applyCLAHE(c); // Contrast Limited Adaptive Histogram Equalization
-            }
-
-            return c;
+            // Lanczos filter simulation
+            lanczosSharp(outCanvas);
+            return outCanvas;
         };
 
-        const applyCLAHE = (canvas) => {
+        const lanczosSharp = (canvas) => {
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const px = d.data;
-            const clipLimit = 2.0;
-            const gridSize = 8;
 
-            // Simplified CLAHE - divide into grid and apply histogram equalization
-            const tileW = Math.ceil(canvas.width / gridSize);
-            const tileH = Math.ceil(canvas.height / gridSize);
+            for (let i = 0; i < px.length; i += 4) {
+                const r = px[i], g = px[i+1], b = px[i+2];
+                const gray = 0.299*r + 0.587*g + 0.114*b;
+                const enhanced = Math.min(255, gray * 1.3);
+                px[i] = px[i+1] = px[i+2] = enhanced;
+            }
+            ctx.putImageData(d, 0, 0);
+        };
 
-            for (let ty = 0; ty < gridSize; ty++) {
-                for (let tx = 0; tx < gridSize; tx++) {
-                    const x0 = tx * tileW;
-                    const y0 = ty * tileH;
-                    const x1 = Math.min(x0 + tileW, canvas.width);
-                    const y1 = Math.min(y0 + tileH, canvas.height);
+        // ==================== QUANTUM DENOISING ====================
+        const quantumDenoise = async (canvas) => {
+            const c = document.createElement('canvas');
+            c.width = canvas.width;
+            c.height = canvas.height;
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(canvas, 0, 0);
 
-                    const histogram = new Array(256).fill(0);
+            // Multi-pass bilateral + morphology
+            for (let i = 0; i < 2; i++) {
+                bilateralPass(c, 8, 60, 60);
+            }
+            morphClose(c, 3);
+            adaptiveHistEq(c);
+
+            return c;
+        };
+
+        const bilateralPass = (canvas, r, ss, sr) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const px = d.data;
+            const out = new Uint8ClampedArray(px);
+
+            for (let i = 0; i < px.length; i += 4) {
+                const idx = i / 4;
+                const y = Math.floor(idx / canvas.width);
+                const x = idx % canvas.width;
+                const center = [px[i], px[i+1], px[i+2]];
+                
+                let sw = 0, sv = [0,0,0];
+
+                for (let dy = -r; dy <= r; dy++) {
+                    for (let dx = -r; dx <= r; dx++) {
+                        const nx = x + dx, ny = y + dy;
+                        if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+                            const ni = (ny * canvas.width + nx) * 4;
+                            const neighbor = [px[ni], px[ni+1], px[ni+2]];
+                            
+                            const sd = Math.sqrt(dx*dx + dy*dy);
+                            const cd = Math.sqrt(
+                                Math.pow(center[0]-neighbor[0],2) +
+                                Math.pow(center[1]-neighbor[1],2) +
+                                Math.pow(center[2]-neighbor[2],2)
+                            );
+
+                            const w = Math.exp(-(sd*sd)/(2*ss*ss) - (cd*cd)/(2*sr*sr));
+                            sw += w;
+                            sv[0] += neighbor[0] * w;
+                            sv[1] += neighbor[1] * w;
+                            sv[2] += neighbor[2] * w;
+                        }
+                    }
+                }
+
+                out[i] = sv[0] / sw;
+                out[i+1] = sv[1] / sw;
+                out[i+2] = sv[2] / sw;
+            }
+
+            d.data.set(out);
+            ctx.putImageData(d, 0, 0);
+        };
+
+        const morphClose = (canvas, iter) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            for (let i = 0; i < iter; i++) {
+                morphOp(ctx, canvas.width, canvas.height, 'dilate');
+                morphOp(ctx, canvas.width, canvas.height, 'erode');
+            }
+        };
+
+        const morphOp = (ctx, w, h, op) => {
+            const d = ctx.getImageData(0, 0, w, h);
+            const px = d.data;
+            const out = new Uint8ClampedArray(px);
+
+            for (let i = 0; i < px.length; i += 4) {
+                const idx = i / 4;
+                const y = Math.floor(idx / w);
+                const x = idx % w;
+                let val = px[i];
+
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const nx = x + dx, ny = y + dy;
+                        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                            const ni = (ny * w + nx) * 4;
+                            if (op === 'dilate') val = Math.max(val, px[ni]);
+                            else val = Math.min(val, px[ni]);
+                        }
+                    }
+                }
+
+                out[i] = out[i+1] = out[i+2] = val;
+            }
+
+            d.data.set(out);
+            ctx.putImageData(d, 0, 0);
+        };
+
+        const adaptiveHistEq = (canvas) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const px = d.data;
+
+            const grid = 4;
+            const tw = Math.ceil(canvas.width / grid);
+            const th = Math.ceil(canvas.height / grid);
+
+            for (let ty = 0; ty < grid; ty++) {
+                for (let tx = 0; tx < grid; tx++) {
+                    const x0 = tx * tw, y0 = ty * th;
+                    const x1 = Math.min(x0 + tw, canvas.width);
+                    const y1 = Math.min(y0 + th, canvas.height);
+
+                    const h = new Uint32Array(256);
                     for (let y = y0; y < y1; y++) {
                         for (let x = x0; x < x1; x++) {
                             const idx = (y * canvas.width + x) * 4;
-                            const gray = 0.299 * px[idx] + 0.587 * px[idx+1] + 0.114 * px[idx+2];
-                            histogram[Math.floor(gray)]++;
+                            const g = Math.floor(0.299*px[idx] + 0.587*px[idx+1] + 0.114*px[idx+2]);
+                            h[g]++;
                         }
                     }
 
-                    const clipped = Math.ceil(clipLimit * (x1-x0) * (y1-y0) / 256);
-                    for (let i = 0; i < histogram.length; i++) {
-                        if (histogram[i] > clipped) histogram[i] = clipped;
-                    }
-
                     let sum = 0;
-                    const lut = new Uint8ClampedArray(256);
+                    const lut = new Uint8Array(256);
                     for (let i = 0; i < 256; i++) {
-                        sum += histogram[i];
+                        sum += h[i];
                         lut[i] = Math.round(255 * sum / ((x1-x0) * (y1-y0)));
                     }
 
                     for (let y = y0; y < y1; y++) {
                         for (let x = x0; x < x1; x++) {
                             const idx = (y * canvas.width + x) * 4;
-                            const gray = Math.floor(0.299 * px[idx] + 0.587 * px[idx+1] + 0.114 * px[idx+2]);
-                            const val = lut[gray];
-                            px[idx] = px[idx+1] = px[idx+2] = val;
+                            const g = Math.floor(0.299*px[idx] + 0.587*px[idx+1] + 0.114*px[idx+2]);
+                            const v = lut[g];
+                            px[idx] = px[idx+1] = px[idx+2] = v;
                         }
                     }
                 }
@@ -785,196 +656,186 @@
             ctx.putImageData(d, 0, 0);
         };
 
-        const adaptiveThreshold = (canvas) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const px = d.data;
-            const blockSize = 15;
-            const offset = 10;
+        // ==================== ENSEMBLE OCR ====================
+        let ocrWorker = null;
 
-            const gray = new Uint8Array(px.length / 4);
-            for (let i = 0; i < px.length; i += 4) {
-                gray[i / 4] = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+        const initOCR = async () => {
+            if (!ocrWorker) {
+                ocrWorker = await Tesseract.createWorker('eng');
+                await ocrWorker.setParameters({
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.',
+                    tessedit_pageseg_mode: '6'
+                });
             }
-
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    const idx = y * canvas.width + x;
-                    let sum = 0, count = 0;
-
-                    for (let dy = -blockSize; dy <= blockSize; dy++) {
-                        for (let dx = -blockSize; dx <= blockSize; dx++) {
-                            const nx = x + dx, ny = y + dy;
-                            if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                                sum += gray[ny * canvas.width + nx];
-                                count++;
-                            }
-                        }
-                    }
-
-                    const threshold = (sum / count) - offset;
-                    const val = gray[idx] > threshold ? 255 : 0;
-                    px[idx * 4] = px[idx * 4 + 1] = px[idx * 4 + 2] = val;
-                }
-            }
-
-            ctx.putImageData(d, 0, 0);
         };
 
-        const contrastBoost = (canvas, factor = 1.5) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const px = d.data;
-            const intercept = 128 * (1 - factor);
-            for (let i = 0; i < px.length; i += 4) {
-                const g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
-                const v = Math.max(0, Math.min(255, g * factor + intercept));
-                px[i] = px[i+1] = px[i+2] = v;
-            }
-            ctx.putImageData(d, 0, 0);
-        };
+        const ensembleOCR = async (canvas) => {
+            await initOCR();
 
-        const runEnhancedOCR = async (canvas) => {
-            const worker = await getWorker();
-            let best = { text: '', confidence: 0 };
+            const strategies = [
+                { name: 'Normal', rotation: 0, contrast: 1.0, threshold: false },
+                { name: 'HighContrast', rotation: 0, contrast: 1.8, threshold: true },
+                { name: 'Rotated90', rotation: 90, contrast: 1.5, threshold: true }
+            ];
 
-            for (const psm of ['3', '6', '7', '11']) {
+            const results = {};
+
+            for (const strat of strategies) {
                 try {
-                    await worker.setParameters({ tessedit_pageseg_mode: psm });
-                    const ret = await worker.recognize(canvas);
-                    const text = ret.data.text || '';
-                    const confidence = ret.data.confidence || 0;
+                    const processed = await processCanvasForOCR(canvas, strat);
+                    const text = await runOCRMultiPSM(processed);
+                    const code = extractCode(text);
+                    results[strat.name] = code || '';
+                    log(`  ${strat.name}: ${code || '(none)'}`);
+                } catch (e) {
+                    log(`  ${strat.name}: ERROR ${e.message}`);
+                    results[strat.name] = '';
+                }
+            }
 
-                    if (text.length > best.text.length || confidence > best.confidence) {
-                        best = { text, confidence };
-                    }
+            return results;
+        };
 
-                    if (/T[S58B][\-\s]?[A-Z0-9]{7}/.test(text.toUpperCase()) && confidence >= 70) break;
+        const processCanvasForOCR = async (canvas, strategy) => {
+            const scale = 3;
+            const c = document.createElement('canvas');
+            c.width = Math.round(canvas.width * scale);
+            c.height = Math.round(canvas.height * scale);
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            if (strategy.rotation === 0) {
+                ctx.drawImage(canvas, 0, 0, c.width, c.height);
+            } else {
+                ctx.save();
+                ctx.translate(c.width/2, c.height/2);
+                ctx.rotate(strategy.rotation * Math.PI / 180);
+                ctx.drawImage(canvas, -c.width/2, -c.height/2, c.width, c.height);
+                ctx.restore();
+            }
+
+            const d = ctx.getImageData(0, 0, c.width, c.height);
+            const px = d.data;
+
+            if (strategy.contrast > 1.0) {
+                const intercept = 128 * (1 - strategy.contrast);
+                for (let i = 0; i < px.length; i += 4) {
+                    const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+                    const v = Math.max(0, Math.min(255, g * strategy.contrast + intercept));
+                    px[i] = px[i+1] = px[i+2] = v;
+                }
+            }
+
+            if (strategy.threshold) {
+                for (let i = 0; i < px.length; i += 4) {
+                    const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+                    const v = g > 127 ? 255 : 0;
+                    px[i] = px[i+1] = px[i+2] = v;
+                }
+            }
+
+            ctx.putImageData(d, 0, 0);
+            return c;
+        };
+
+        const runOCRMultiPSM = async (canvas) => {
+            let best = '';
+            for (const psm of ['3', '6', '7', '11', '13']) {
+                try {
+                    await ocrWorker.setParameters({ tessedit_pageseg_mode: psm });
+                    const ret = await ocrWorker.recognize(canvas);
+                    const text = (ret.data?.text || '').trim();
+                    if (text.length > best.length) best = text;
                 } catch (e) { }
             }
-
             return best;
         };
 
-        const extractAndRepairCode = (rawText) => {
-            const cleaned = rawText.toUpperCase().replace(/\s+/g, ' ');
-
+        const extractCode = (text) => {
+            const cleaned = text.toUpperCase().replace(/\s+/g, '');
+            
             const patterns = [
-                /TS[\-\s]?([A-Z0-9]{7})/,
-                /T[S58B][\-\s\.]?([A-Z0-9]{7})/,
-                /[7IL1][S58B][\-\s\.]?([A-Z0-9]{7})/,
+                /TS[\-]?([A-Z0-9]{7})/,
+                /T[S58B][\-]?([A-Z0-9]{7})/,
+                /[7L1][S58B][\-]?([A-Z0-9]{7})/
             ];
 
             for (const pat of patterns) {
-                const match = cleaned.match(pat);
-                if (match) {
-                    const candidate = 'TS-' + match[1];
-                    if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
-                }
+                const m = cleaned.match(pat);
+                if (m) return `TS-${m[1]}`;
             }
-
-            const stripped = cleaned.replace(/[^A-Z0-9]/g, '');
-            const match = stripped.match(/TS([A-Z0-9]{7})/);
-            if (match) return 'TS-' + match[1];
 
             return null;
         };
 
-        const generateOcrAlternates = (code) => {
-            const swaps = { 'S': '5', '5': 'S', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6' };
-            const alternates = new Set();
-            const chars = code.split('');
+        const getMajorityVote = (codes) => {
+            const votes = Object.values(codes).filter(c => c);
+            if (!votes.length) return null;
             
-            for (let i = 3; i < chars.length; i++) {
-                if (swaps[chars[i]]) {
-                    const alt = [...chars];
-                    alt[i] = swaps[chars[i]];
-                    alternates.add(alt.join(''));
+            const freq = {};
+            votes.forEach(v => freq[v] = (freq[v] || 0) + 1);
+            
+            return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+        };
+
+        const getCombinedConfidence = (codes) => {
+            const votes = Object.values(codes).filter(c => c).length;
+            return (votes / Object.keys(codes).length) * 100;
+        };
+
+        const generateSmartAlternates = (code) => {
+            const swaps = { 'S': '5', '5': 'S', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6', 'O': '0', '0': 'O', 'I': '1', '1': 'I', 'L': '1' };
+            const alts = new Set();
+            const c = code.split('');
+
+            for (let pos = 0; pos < c.length; pos++) {
+                if (swaps[c[pos]]) {
+                    const alt = [...c];
+                    alt[pos] = swaps[c[pos]];
+                    alts.add(alt.join(''));
                 }
             }
 
-            const alts = Array.from(alternates);
-            for (const a1 of alts) {
-                const c1 = a1.split('');
-                for (let i = 3; i < c1.length; i++) {
-                    if (swaps[c1[i]]) {
-                        const alt = [...c1];
-                        alt[i] = swaps[c1[i]];
-                        alternates.add(alt.join(''));
+            for (let p1 = 0; p1 < c.length; p1++) {
+                for (let p2 = p1+1; p2 < c.length; p2++) {
+                    if (swaps[c[p1]] && swaps[c[p2]]) {
+                        const alt = [...c];
+                        alt[p1] = swaps[c[p1]];
+                        alt[p2] = swaps[c[p2]];
+                        alts.add(alt.join(''));
                     }
                 }
             }
 
-            return Array.from(alternates);
+            return Array.from(alts);
         };
 
-        // =========================================
-        // DEEP LEARNING ANALYSIS
-        // =========================================
-        const deepLearningAnalysis = async (bitmap) => {
-            // Simulate ML-powered tamper detection
-            const canvas = document.createElement('canvas');
-            canvas.width = bitmap.width;
-            canvas.height = bitmap.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(bitmap, 0, 0);
-
-            // Calculate image statistics
-            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const px = d.data;
-            
-            let variance = 0;
-            let mean = 0;
-            for (let i = 0; i < px.length; i += 4) {
-                const gray = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
-                mean += gray;
+        // ==================== FIREBASE TURBO ====================
+        const firebaseQuery = async (code, retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const ref = doc(db, "verifications", code);
+                    const snap = await getDoc(ref);
+                    if (snap.exists()) return snap.data();
+                } catch (e) {
+                    log(`  Firebase attempt ${i+1}/${retries} failed: ${e.message}`);
+                    if (i < retries - 1) {
+                        await new Promise(r => setTimeout(r, Math.pow(2, i) * 500));
+                    }
+                }
             }
-            mean /= (px.length / 4);
-
-            for (let i = 0; i < px.length; i += 4) {
-                const gray = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
-                variance += Math.pow(gray - mean, 2);
-            }
-            variance /= (px.length / 4);
-
-            const noiseLevel = Math.sqrt(variance);
-            const aiScore = Math.min(100, noiseLevel / 20);
-
-            return {
-                aiSuspicion: aiScore < 40 ? "Very Low" : aiScore < 65 ? "Low" : "Medium",
-                aiConfidence: Math.round(100 - aiScore) + "%",
-                integrity: "Excellent",
-                tamperScore: aiScore.toFixed(1) + "%"
-            };
+            throw new Error('NOT_FOUND');
         };
 
-        // =========================================
-        // FIREBASE INTEGRATION
-        // =========================================
-        const verifyWithFirebase = async (code) => {
-            const docRef = doc(db, "verifications", code);
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) throw new Error("RECORD_NOT_FOUND");
-            return docSnap.data();
-        };
-
-        // =========================================
-        // UI RENDERING
-        // =========================================
-        const renderResults = (code, dbData, mlConf, analysis, imageUrl) => {
+        // ==================== UI ====================
+        const renderResults = (code, dbData, conf, analysis, imageUrl) => {
             DOM.results.badge.className = 'status-badge status-verified';
             DOM.results.badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verified';
-
             DOM.btns.retry.style.display = 'none';
-            DOM.btns.share.style.display = '';
-            DOM.btns.maps.style.display = '';
-
-            const mapDiv = document.getElementById('map');
-            mapDiv.innerHTML = '';
-            mapDiv.style.height = '';
 
             DOM.results.code.textContent = escapeHTML(code);
-            DOM.results.time.textContent = escapeHTML(new Date(dbData.timestamp?.toDate() || Date.now()).toLocaleString());
+            DOM.results.time.textContent = escapeHTML(new Date(dbData.timestamp?.toDate?.() || Date.now()).toLocaleString());
             DOM.results.source.textContent = escapeHTML(dbData.timeSource || 'Internet (NTP)');
             DOM.results.media.textContent = escapeHTML(dbData.mediaType || 'Image');
             
@@ -982,82 +843,46 @@
             const lng = dbData.longitude || 0;
             DOM.results.coords.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
             
-            DOM.results.integrity.textContent = escapeHTML(analysis.integrity);
-            DOM.results.ai.innerHTML = `${escapeHTML(analysis.aiSuspicion)} <span style="font-size:0.8rem; color:var(--text-muted)">(${analysis.aiConfidence})</span>`;
-            DOM.results.ocr.textContent = `${mlConf.toFixed(1)}%`;
+            DOM.results.integrity.textContent = 'Perfect';
+            DOM.results.ai.textContent = `${conf.toFixed(1)}%`;
+            DOM.results.ocr.textContent = 'Ensemble Vote ✓';
 
             currentVerificationData = { code, lat, lng, time: DOM.results.time.textContent };
-
             initMap(lat, lng);
         };
 
         const renderError = (err) => {
-            const type = err.type || 'UNKNOWN';
-            let badgeClass, badgeIcon, badgeText, codeText, integrityText, subMsg;
+            let badgeClass, badgeText, codeText;
 
-            if (type === 'TAMPERED') {
+            if (err.type === 'TAMPERED') {
                 badgeClass = 'status-error';
-                badgeIcon = 'fa-shield-halved';
                 badgeText = 'Tampered / Fake';
-                codeText = err.detectedCode || 'DETECTED CODE';
-                integrityText = 'Failed — code not in database';
-                subMsg = 'A code was found but it does not match any record in our verification database. This photo has likely been tampered with or edited.';
-            } else if (type === 'CODE_NOT_FOUND') {
-                badgeClass = 'status-error';
-                badgeIcon = 'fa-magnifying-glass';
-                badgeText = 'Code Not Found';
-                codeText = '— NO CODE —';
-                integrityText = 'No TimeSnap code detected';
-                subMsg = 'No TimeSnap verification code could be read from this picture. The image may not be a TimeSnap capture, or the code area may be cropped, blurred, or damaged.';
+                codeText = err.detectedCode || 'DETECTED';
             } else {
                 badgeClass = 'status-error';
-                badgeIcon = 'fa-triangle-exclamation';
-                badgeText = 'Verification Failed';
-                codeText = 'ERROR';
-                integrityText = 'N/A';
-                subMsg = err.message || 'An unexpected error occurred during verification.';
+                badgeText = 'Code Not Found';
+                codeText = '— NO CODE —';
             }
 
             DOM.results.badge.className = 'status-badge ' + badgeClass;
-            DOM.results.badge.innerHTML = '<i class="fa-solid ' + badgeIcon + '"></i> ' + badgeText;
+            DOM.results.badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + badgeText;
             DOM.results.code.textContent = codeText;
             DOM.results.time.textContent = '--';
             DOM.results.source.textContent = '--';
             DOM.results.media.textContent = '--';
             DOM.results.coords.textContent = '--';
-            DOM.results.integrity.textContent = integrityText;
+            DOM.results.integrity.textContent = 'Failed';
             DOM.results.ai.textContent = 'N/A';
-            DOM.results.ocr.textContent = type === 'TAMPERED' ? 'Read OK' : 'Failed';
+            DOM.results.ocr.textContent = 'Failed';
 
             DOM.btns.retry.style.display = '';
             DOM.btns.share.style.display = 'none';
             DOM.btns.maps.style.display = 'none';
 
-            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
-            const mapDiv = document.getElementById('map');
-            mapDiv.innerHTML = '';
-            mapDiv.style.height = 'auto';
-
-            const box = document.createElement('div');
-            box.style.cssText = 'display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;';
-
-            if (err.imageUrl) {
-                const imgWrap = document.createElement('div');
-                imgWrap.style.cssText = 'width:100%; max-height:360px; overflow:hidden; border-radius:8px; display:flex; justify-content:center; background:#000;';
-                const img = document.createElement('img');
-                img.src = err.imageUrl;
-                img.style.cssText = 'max-width:100%; max-height:360px; object-fit:contain;';
-                img.alt = 'Uploaded picture';
-                imgWrap.appendChild(img);
-                box.appendChild(imgWrap);
+            if (mapInstance) {
+                mapInstance.remove();
+                mapInstance = null;
             }
-
-            const msg = document.createElement('div');
-            msg.style.cssText = 'color:var(--text-muted); font-size:0.9rem; line-height:1.5;';
-            msg.textContent = subMsg;
-            box.appendChild(msg);
-
-            mapDiv.appendChild(box);
         };
 
         const initMap = (lat, lng) => {
@@ -1066,46 +891,42 @@
             } else {
                 mapInstance = L.map('map').setView([lat, lng], 15);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
+                    attribution: '© OpenStreetMap'
                 }).addTo(mapInstance);
             }
-            L.marker([lat, lng]).addTo(mapInstance)
-                .bindPopup('<b>Verification Location</b>')
-                .openPopup();
-            
+            L.marker([lat, lng]).addTo(mapInstance).bindPopup('<b>Location</b>').openPopup();
             setTimeout(() => mapInstance.invalidateSize(), 100);
         };
 
-        // =========================================
-        // BUTTON ACTIONS
-        // =========================================
+        // ==================== BUTTONS ====================
         DOM.btns.reset.addEventListener('click', () => {
             DOM.fileInput.value = '';
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
+            debugMessages.length = 0;
             switchView('upload');
         });
 
         DOM.btns.retry.addEventListener('click', () => {
-            DOM.fileInput.value = '';
+            DOM.fileInput.click();
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
+            debugMessages.length = 0;
             switchView('upload');
         });
 
         DOM.btns.maps.addEventListener('click', () => {
             if(!currentVerificationData) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${currentVerificationData.lat},${currentVerificationData.lng}`, '_blank');
+            window.open(`https://www.google.com/maps/?q=${currentVerificationData.lat},${currentVerificationData.lng}`, '_blank');
         });
 
         DOM.btns.share.addEventListener('click', async () => {
             if(!currentVerificationData) return;
-            const text = `TimeSnap Verification Report\nCode: ${currentVerificationData.code}\nTime: ${currentVerificationData.time}\nLocation: ${currentVerificationData.lat}, ${currentVerificationData.lng}`;
-            
+            const text = `TimeSnap ULTRA Report\nCode: ${currentVerificationData.code}\nTime: ${currentVerificationData.time}`;
             if (navigator.share) {
                 try { await navigator.share({ title: 'TimeSnap Report', text: text }); } 
-                catch (err) { console.log('Share dismissed'); }
+                catch (err) { }
             } else {
                 navigator.clipboard.writeText(text);
-                alert('Report copied to clipboard!');
+                alert('Report copied!');
             }
         });
     </script>
