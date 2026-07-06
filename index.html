@@ -427,6 +427,7 @@
 
                 // Case A — no code found on the picture at all
                 if (!code) {
+                    console.warn('[TimeSnap] No code detected in image');
                     renderError({
                         type: 'CODE_NOT_FOUND',
                         imageUrl: imageUrl,
@@ -436,24 +437,46 @@
                     return;
                 }
 
+                // Validate code came from left edge (strategy confidence check)
+                if (!scanResult.fromLeftEdge) {
+                    console.warn('[TimeSnap] Code detected but not from expected left-edge region. Strategy:', scanResult.strategy);
+                    renderError({
+                        type: 'CODE_NOT_FOUND',
+                        imageUrl: imageUrl,
+                        detectedCode: null,
+                        message: 'Code detected but not from the expected left-edge region'
+                    });
+                    switchView('results');
+                    return;
+                }
+
+                console.log(`[TimeSnap] Code detected: ${code} via strategy: ${scanResult.strategy}`);
+
                 // Try to look up the code — if not found, try OCR-confusion alternates
                 // (e.g. 5↔S, 8↔B, 2↔Z, 6↔G) before declaring tampered.
                 try {
                     const firestoreData = await verifyWithFirebase(code);
                     setStep('firebase', 'done');
+                    console.log(`[TimeSnap] ✓ Code verified in Firebase: ${code}`);
                     // Case C — success
                     renderResults(code, firestoreData, scanResult.confidence, analysis, imageUrl);
                     switchView('results');
                 } catch (fbErr) {
+                    console.warn(`[TimeSnap] Code not found in Firebase: ${code}. Trying alternates...`);
+                    
                     // Try alternate readings (character swaps commonly confused by OCR)
-                    const alternates = generateOcrAlternates(code);
+                    // Limited to 8 alternates to reduce false positives
+                    const alternates = generateOcrAlternates(code).slice(0, 8);
                     let matched = null;
                     let matchedData = null;
+                    
                     for (const alt of alternates) {
                         try {
+                            console.log(`[TimeSnap] Trying alternate: ${alt}`);
                             const data = await verifyWithFirebase(alt);
                             matched = alt;
                             matchedData = data;
+                            console.log(`[TimeSnap] ✓ Alternate matched in Firebase: ${alt}`);
                             break;
                         } catch (_) { /* try next alt */ }
                     }
@@ -464,6 +487,7 @@
                         switchView('results');
                     } else {
                         // Case B — code found on picture but NOT in database = tampered/fake
+                        console.error(`[TimeSnap] Code not found in database (tampered): ${code}`);
                         renderError({
                             type: 'TAMPERED',
                             imageUrl: imageUrl,
@@ -583,14 +607,12 @@
             const W = bitmap.width, H = bitmap.height;
             const strategies = [];
 
-            // Left edge widths to try (in order — narrowest is most accurate)
-            // Code sits at very left edge, ~8-12% of image width
+            // Left edge widths to try (NARROWER — most accurate to least)
+            // Code sits at very left edge, only 5-10% of image width
             const widths = [
-                { name: 'left 10%',  ratio: 0.10 },
-                { name: 'left 8%',   ratio: 0.08 },
-                { name: 'left 13%',  ratio: 0.13 },
-                { name: 'left 6%',   ratio: 0.06 },
-                { name: 'left 18%',  ratio: 0.18 }
+                { name: 'left 5%',   ratio: 0.05 },   // Narrowest — most precise
+                { name: 'left 7%',   ratio: 0.07 },
+                { name: 'left 10%',  ratio: 0.10 }
             ];
 
             // Processing modes (best first)
@@ -732,17 +754,17 @@
                 }
             }
             // Return sorted by fewest swaps first (closer to original are more likely)
-            return Array.from(alternates).slice(0, 30); // cap to prevent excess Firebase reads
+            return Array.from(alternates);
         };
 
         // Run OCR across many strategies until we find a valid code
         const scanForCode = async (bitmap) => {
             const strategies = buildScanStrategies(bitmap);
-            const stepEl = DOM.progress.steps.ocr;
-            const label = stepEl ? stepEl.querySelector('.progress-spinner')?.parentElement : null;
+            const stepEl = DOM.steps.ocr;
 
             let found = null;
             let bestConfidence = 0;
+            let successStrategy = null;
 
             for (let i = 0; i < strategies.length; i++) {
                 if (found) break;
@@ -757,19 +779,37 @@
                 try {
                     const canvas = extractRegion(bitmap, s.sx, s.sy, s.sw, s.sh, s.rotate, s.mode);
                     const result = await runOCROnCanvas(canvas);
+                    
+                    console.log(`[TimeSnap OCR] Strategy ${s.name}: "${result.text}" (confidence: ${result.confidence.toFixed(1)}%)`);
+                    
                     const code = extractAndRepairCode(result.text);
                     if (code) {
                         found = code;
                         bestConfidence = result.confidence;
+                        successStrategy = s.name;
+                        console.log(`[TimeSnap OCR] ✓ Code found: ${code}`);
                         break;
                     }
-                } catch (e) { /* try next */ }
+                } catch (e) {
+                    console.warn(`[TimeSnap OCR] Strategy ${s.name} failed:`, e.message);
+                }
 
                 // Yield to browser every few strategies to keep UI responsive
                 if (i % 5 === 4) await new Promise(r => setTimeout(r, 0));
             }
 
-            return { code: found, confidence: bestConfidence };
+            // Mark as "from left edge" only if found via a left-edge strategy
+            const fromLeftEdge = found && successStrategy && 
+                                 (successStrategy.includes('5%') || 
+                                  successStrategy.includes('7%') || 
+                                  successStrategy.includes('10%'));
+
+            return { 
+                code: found, 
+                confidence: bestConfidence,
+                fromLeftEdge: fromLeftEdge,
+                strategy: successStrategy
+            };
         };
 
         // =========================================
@@ -950,7 +990,7 @@
 
         DOM.btns.share.addEventListener('click', async () => {
             if(!currentVerificationData) return;
-            const text = `TimeSnap Verification Report\nCode: ${currentVerificationData.code}\nTime: ${currentVerificationData.time}\nLocation: ${currentVerificationData.lat}, ${currentVerificationData.lng}\nStatus: Verified`;
+            const text = `TimeSnap Verification Report\nCode: ${currentVerificationData.code}\nTime: ${currentVerificationData.time}\nLocation: ${currentVerificationData.lat}, ${currentVerificationData.lng}`;
             
             if (navigator.share) {
                 try { await navigator.share({ title: 'TimeSnap Report', text: text }); } 
