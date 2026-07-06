@@ -319,7 +319,7 @@
         // FIREBASE V9 CONFIGURATION & INIT
         // =========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAP5_okpPwM-O1Onp8W0U9gJt4V1K8I4T8",
@@ -331,7 +331,12 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        // Force long-polling for regional databases (europe-west2) to avoid
+        // "Failed to fetch" errors when WebSocket / auto-detect fails.
+        const db = initializeFirestore(app, {
+            experimentalForceLongPolling: true,
+            ignoreUndefinedProperties: true
+        });
 
         // =========================================
         // DOM ELEMENTS & STATE
