@@ -436,7 +436,8 @@
                     return;
                 }
 
-                // Try to look up the code — if not in DB, it's fake/tampered
+                // Try to look up the code — if not found, try OCR-confusion alternates
+                // (e.g. 5↔S, 8↔B, 2↔Z, 6↔G) before declaring tampered.
                 try {
                     const firestoreData = await verifyWithFirebase(code);
                     setStep('firebase', 'done');
@@ -444,13 +445,32 @@
                     renderResults(code, firestoreData, scanResult.confidence, analysis, imageUrl);
                     switchView('results');
                 } catch (fbErr) {
-                    // Case B — code found on picture but NOT in database = tampered/fake
-                    renderError({
-                        type: 'TAMPERED',
-                        imageUrl: imageUrl,
-                        detectedCode: code
-                    });
-                    switchView('results');
+                    // Try alternate readings (character swaps commonly confused by OCR)
+                    const alternates = generateOcrAlternates(code);
+                    let matched = null;
+                    let matchedData = null;
+                    for (const alt of alternates) {
+                        try {
+                            const data = await verifyWithFirebase(alt);
+                            matched = alt;
+                            matchedData = data;
+                            break;
+                        } catch (_) { /* try next alt */ }
+                    }
+
+                    if (matched && matchedData) {
+                        setStep('firebase', 'done');
+                        renderResults(matched, matchedData, scanResult.confidence, analysis, imageUrl);
+                        switchView('results');
+                    } else {
+                        // Case B — code found on picture but NOT in database = tampered/fake
+                        renderError({
+                            type: 'TAMPERED',
+                            imageUrl: imageUrl,
+                            detectedCode: code
+                        });
+                        switchView('results');
+                    }
                 }
 
             } catch (error) {
@@ -516,12 +536,12 @@
 
         // Extract a region of the image with rotation and processing.
         // Narrow strips get aggressive upscaling because OCR needs
-        // at least ~30 pixels of character height to work reliably.
+        // at least ~200 pixels of character height to work reliably.
         const extractRegion = (bitmap, sx, sy, sw, sh, rotate, mode) => {
             // After rotating 90/270, the strip's SHORT dimension (sw)
             // becomes the HEIGHT of the horizontal image sent to OCR.
-            // We need at least 60px tall for reliable OCR — upscale hard.
-            const targetShortSide = 120;
+            // We need at least 200px tall for reliable OCR on tiny burned text.
+            const targetShortSide = 200;
             const scale = Math.max(3, targetShortSide / sw);
             const outW = Math.round(sw * scale);
             const outH = Math.round(sh * scale);
@@ -576,9 +596,9 @@
             // Processing modes (best first)
             const modes = ['adaptive', 'contrast-thresh', 'contrast'];
 
-            // Rotation 270 is the primary orientation (bottom-to-top → left-to-right)
-            // 90 is fallback if user pasted rotated image
-            const rotations = [270, 90];
+            // Rotation 90 is primary (works for standard TimeSnap portrait output)
+            // 270 is fallback for images that came in rotated differently
+            const rotations = [90, 270];
 
             for (const rot of rotations) {
                 for (const w of widths) {
@@ -607,25 +627,31 @@
             if (!ocrWorker) {
                 ocrWorker = await Tesseract.createWorker('eng');
                 await ocrWorker.setParameters({
-                    // Allow full alphabet + digits + dash + space + dot (for TIMESNAP.INFO)
                     tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- .',
-                    // PSM 7 = treat as a single line of text (fits the rotated strip perfectly)
-                    tessedit_pageseg_mode: '7',
-                    // Preserve interword spaces so the regex can find TS-XXXXXXX cleanly
                     preserve_interword_spaces: '1'
                 });
             }
             return ocrWorker;
         };
 
+        // Try both PSM modes — PSM 11 (sparse text) often finds codes that
+        // PSM 7 (single line) misses on narrow vertical strips.
         const runOCROnCanvas = async (canvas) => {
-            try {
-                const worker = await getWorker();
-                const ret = await worker.recognize(canvas);
-                return { text: ret.data.text || '', confidence: ret.data.confidence || 0 };
-            } catch (e) {
-                return { text: '', confidence: 0 };
+            const worker = await getWorker();
+            let best = { text: '', confidence: 0 };
+            for (const psm of ['11', '7', '6']) {
+                try {
+                    await worker.setParameters({ tessedit_pageseg_mode: psm });
+                    const ret = await worker.recognize(canvas);
+                    const text = ret.data.text || '';
+                    if (text.length > best.text.length) {
+                        best = { text, confidence: ret.data.confidence || 0 };
+                    }
+                    // Early exit if we already have something with TS in it
+                    if (/T[S58B]/.test(text.toUpperCase())) break;
+                } catch (e) { /* try next PSM */ }
             }
+            return best;
         };
 
         // The burn format on the picture is: "TS-XXXXXXX • Verify at TIMESNAP.INFO"
@@ -675,6 +701,38 @@
             }
 
             return null;
+        };
+
+        // Generate alternate readings of a code by swapping OCR-confused characters.
+        // e.g. TS-PP6KSAT → also try TS-PP6K5AT, TS-PP6KBAT, TS-PPGKSAT, etc.
+        // TimeSnap uses safe alphabet ABCDEFGHJKLMNPQRSTUVWXYZ23456789 (no O/0/I/1/L)
+        // but S/5, 8/B, 2/Z, 6/G are still ambiguous.
+        const generateOcrAlternates = (code) => {
+            const swaps = { 'S': '5', '5': 'S', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6' };
+            const alternates = new Set();
+            const chars = code.split('');
+            // Try swapping each single character
+            for (let i = 3; i < chars.length; i++) {
+                if (swaps[chars[i]]) {
+                    const alt = [...chars];
+                    alt[i] = swaps[chars[i]];
+                    alternates.add(alt.join(''));
+                }
+            }
+            // Try swapping pairs of characters (up to 2 swaps at once)
+            const alts = Array.from(alternates);
+            for (const a1 of alts) {
+                const c1 = a1.split('');
+                for (let i = 3; i < c1.length; i++) {
+                    if (swaps[c1[i]]) {
+                        const alt = [...c1];
+                        alt[i] = swaps[c1[i]];
+                        alternates.add(alt.join(''));
+                    }
+                }
+            }
+            // Return sorted by fewest swaps first (closer to original are more likely)
+            return Array.from(alternates).slice(0, 30); // cap to prevent excess Firebase reads
         };
 
         // Run OCR across many strategies until we find a valid code
