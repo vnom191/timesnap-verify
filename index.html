@@ -545,7 +545,7 @@
             ctx.putImageData(d, 0, 0);
         };
 
-        const contrastBoost = (canvas, factor = 1.8) => {
+        const contrastBoost = (canvas, factor = 1.5) => {
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const px = d.data;
@@ -595,8 +595,8 @@
             }
 
             if (mode === 'adaptive') adaptiveThreshold(c);
-            else if (mode === 'contrast') contrastBoost(c, 1.8);
-            else if (mode === 'contrast-thresh') { contrastBoost(c, 2.0); adaptiveThreshold(c); }
+            else if (mode === 'contrast') contrastBoost(c, 1.5);
+            else if (mode === 'contrast-thresh') { contrastBoost(c, 1.5); adaptiveThreshold(c); }
 
             return c;
         };
@@ -616,7 +616,7 @@
             ];
 
             // Processing modes (best first)
-            const modes = ['adaptive', 'contrast-thresh', 'contrast'];
+            const modes = ['adaptive', 'contrast', 'contrast-thresh'];
 
             // Rotation 90 is primary (works for standard TimeSnap portrait output)
             // 270 is fallback for images that came in rotated differently
@@ -656,22 +656,31 @@
             return ocrWorker;
         };
 
-        // Try both PSM modes — PSM 11 (sparse text) often finds codes that
-        // PSM 7 (single line) misses on narrow vertical strips.
+        // Try both PSM modes — PSM 7 (single line) first, then PSM 11 (sparse text)
+        // PSM 7 is more reliable on thin vertical strips with burned text.
         const runOCROnCanvas = async (canvas) => {
             const worker = await getWorker();
             let best = { text: '', confidence: 0 };
-            for (const psm of ['11', '7', '6']) {
+            for (const psm of ['7', '11', '6']) {
                 try {
                     await worker.setParameters({ tessedit_pageseg_mode: psm });
                     const ret = await worker.recognize(canvas);
                     const text = ret.data.text || '';
-                    if (text.length > best.text.length) {
-                        best = { text, confidence: ret.data.confidence || 0 };
+                    const confidence = ret.data.confidence || 0;
+                    
+                    console.log(`[TimeSnap OCR PSM${psm}] Confidence: ${confidence.toFixed(1)}%, Text: "${text}"`);
+                    
+                    // Accept text with decent confidence OR if it contains "TS" pattern
+                    const hasCodePattern = /T[S58B]/.test(text.toUpperCase());
+                    if ((confidence >= 40 || hasCodePattern) && text.length > best.text.length) {
+                        best = { text, confidence };
                     }
-                    // Early exit if we already have something with TS in it
-                    if (/T[S58B]/.test(text.toUpperCase())) break;
-                } catch (e) { /* try next PSM */ }
+                    
+                    // Early exit only if we found high-confidence TS code
+                    if (hasCodePattern && confidence >= 60) break;
+                } catch (e) { 
+                    console.warn(`[TimeSnap OCR] PSM${psm} error:`, e.message);
+                }
             }
             return best;
         };
@@ -765,9 +774,10 @@
             let found = null;
             let bestConfidence = 0;
             let successStrategy = null;
+            let allResults = []; // Track all attempts for debugging
 
             for (let i = 0; i < strategies.length; i++) {
-                if (found) break;
+                if (found && bestConfidence >= 50) break; // Stop early on good match
                 const s = strategies[i];
 
                 // Update UI to show progress through variants
@@ -783,13 +793,17 @@
                     console.log(`[TimeSnap OCR] Strategy ${s.name}: "${result.text}" (confidence: ${result.confidence.toFixed(1)}%)`);
                     
                     const code = extractAndRepairCode(result.text);
-                    if (code) {
-                        found = code;
-                        bestConfidence = result.confidence;
-                        successStrategy = s.name;
-                        console.log(`[TimeSnap OCR] ✓ Code found: ${code}`);
-                        break;
+                    if (code && result.confidence >= 35) { // Lowered threshold
+                        // Prefer higher confidence codes, but accept decent ones
+                        if (result.confidence > bestConfidence || (!found && result.confidence >= 35)) {
+                            found = code;
+                            bestConfidence = result.confidence;
+                            successStrategy = s.name;
+                            console.log(`[TimeSnap OCR] ✓ Code found: ${code} (confidence: ${result.confidence.toFixed(1)}%)`);
+                        }
                     }
+                    
+                    allResults.push({ strategy: s.name, code, confidence: result.confidence });
                 } catch (e) {
                     console.warn(`[TimeSnap OCR] Strategy ${s.name} failed:`, e.message);
                 }
@@ -798,17 +812,24 @@
                 if (i % 5 === 4) await new Promise(r => setTimeout(r, 0));
             }
 
-            // Mark as "from left edge" only if found via a left-edge strategy
-            const fromLeftEdge = found && successStrategy && 
-                                 (successStrategy.includes('5%') || 
-                                  successStrategy.includes('7%') || 
-                                  successStrategy.includes('10%'));
+            // Log all attempts if nothing found (for debugging)
+            if (!found) {
+                console.warn('[TimeSnap] No valid code found. Attempts:', allResults);
+            }
+
+            // Mark as "from left edge" — accept any found code if confidence is decent
+            // (relax the edge requirement if confidence >= 50)
+            const fromLeftEdge = found && (
+                bestConfidence >= 50 || // High confidence, trust any region
+                (successStrategy && (successStrategy.includes('5%') || successStrategy.includes('7%') || successStrategy.includes('10%')))
+            );
 
             return { 
                 code: found, 
                 confidence: bestConfidence,
-                fromLeftEdge: fromLeftEdge,
-                strategy: successStrategy
+                fromLeftEdge: fromLeftEdge || !!found, // Accept code if found anywhere with decent confidence
+                strategy: successStrategy,
+                allAttempts: allResults
             };
         };
 
@@ -1000,7 +1021,6 @@
                 alert('Report copied to clipboard!');
             }
         });
-
     </script>
 </body>
 </html>
