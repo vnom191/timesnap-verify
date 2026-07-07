@@ -449,6 +449,10 @@
 
         let mapInstance = null;
         let currentVerificationData = null;
+        // Records every raw OCR attempt this scan makes — text, confidence,
+        // which strategy produced it — so failures can be diagnosed from
+        // real output instead of guessed at blindly. Reset per scan.
+        let scanDebugLog = [];
 
         // =========================================
         // UTILITIES
@@ -1076,7 +1080,7 @@
 
         // Try both PSM modes — PSM 11 (sparse text) often finds codes that
         // PSM 7 (single line) misses on narrow vertical strips.
-        const runOCROnCanvas = async (canvas) => {
+        const runOCROnCanvas = async (canvas, label = '') => {
             const worker = await getWorker();
             let best = { text: '', confidence: 0, code: null };
             // PSM 7 (single line) first since our crop is a tight single strip;
@@ -1087,6 +1091,11 @@
                     const ret = await worker.recognize(canvas);
                     const text = ret.data.text || '';
                     const code = extractAndRepairCode(text);
+
+                    const entry = { label, psm, text: text.replace(/\n/g, ' \u21b5 ').trim(), confidence: Math.round(ret.data.confidence || 0), code };
+                    scanDebugLog.push(entry);
+                    console.log(`[TimeSnap OCR] ${label} | PSM ${psm} | conf ${entry.confidence} | "${entry.text}"${code ? ` | matched: ${code}` : ''}`);
+
                     // Immediate exit the moment any PSM yields a valid code —
                     // this is both faster and more accurate than the old
                     // "longest text wins" heuristic.
@@ -1185,6 +1194,8 @@
         // Run OCR across many strategies until we find a valid code
         const scanForCode = async (bitmap) => {
             const stepEl = DOM.steps.ocr;
+            scanDebugLog = [];
+            console.log('[TimeSnap OCR] Starting scan on image', bitmap.width + 'x' + bitmap.height);
 
             // Vote pool: code -> { count, totalConfidence, bestConfidence }
             // Accepting the very first pattern-shaped match (the old approach)
@@ -1245,10 +1256,11 @@
 
                         for (const mode of modes) {
                             tier0Attempted++;
-                            if (stepEl) stepEl.setAttribute('data-progress', `rotate-first ${rot}° ${edge} ${Math.round(ratio*100)}% ${mode}`);
+                            const label = `T0 rotate${rot}° ${edge} ${Math.round(ratio*100)}% ${mode}`;
+                            if (stepEl) stepEl.setAttribute('data-progress', label);
                             try {
                                 const canvas = extractRegion(rotatedFull, 0, sy, RW, bandH, 0, mode);
-                                const result = await runOCROnCanvas(canvas);
+                                const result = await runOCROnCanvas(canvas, label);
                                 const code = result.code || extractAndRepairCode(result.text);
                                 if (code) {
                                     const entry = record(code, result.confidence || 0);
@@ -1289,7 +1301,7 @@
 
                 try {
                     const canvas = extractRegion(bitmap, s.sx, s.sy, s.sw, s.sh, s.rotate, s.mode);
-                    const result = await runOCROnCanvas(canvas);
+                    const result = await runOCROnCanvas(canvas, `T1 ${s.name}`);
                     const code = result.code || extractAndRepairCode(result.text);
                     if (code) {
                         const entry = record(code, result.confidence || 0);
@@ -1322,7 +1334,7 @@
                                     Math.max(80, bitmap.width * w), bitmap.height,
                                     rot, mode
                                 );
-                                const result = await runOCROnCanvas(canvas);
+                                const result = await runOCROnCanvas(canvas, `T2 desperate ${rot}° ${Math.round(w*100)}% ${mode}`);
                                 const code = result.code || extractAndRepairCode(result.text);
                                 if (code) record(code, result.confidence || 0);
                             } catch (e) { /* continue */ }
@@ -1484,6 +1496,41 @@
             msg.style.cssText = 'color:var(--text-muted); font-size:0.9rem; line-height:1.5;';
             msg.textContent = subMsg;
             box.appendChild(msg);
+
+            // Debug panel — shows the actual raw text Tesseract produced on
+            // each attempt, not a guess. Only present when the OCR pipeline
+            // actually ran (empty for manual-entry failures).
+            if (scanDebugLog.length > 0) {
+                const details = document.createElement('details');
+                details.style.cssText = 'font-size:0.82rem; color:var(--text-muted); border-top:1px solid var(--glass-border); padding-top:10px; margin-top:4px;';
+
+                const summary = document.createElement('summary');
+                summary.textContent = `Show technical debug info (${scanDebugLog.length} OCR attempts)`;
+                summary.style.cssText = 'cursor:pointer; color:var(--text-main); font-weight:500; margin-bottom:8px;';
+                details.appendChild(summary);
+
+                const logText = scanDebugLog
+                    .map(e => `${e.label} | PSM ${e.psm} | conf ${e.confidence} | "${e.text}"${e.code ? ` | matched: ${e.code}` : ''}`)
+                    .join('\n');
+
+                const pre = document.createElement('pre');
+                pre.textContent = logText;
+                pre.style.cssText = 'white-space:pre-wrap; word-break:break-all; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; max-height:240px; overflow-y:auto; font-family:monospace; font-size:0.75rem;';
+                details.appendChild(pre);
+
+                const copyBtn = document.createElement('button');
+                copyBtn.textContent = 'Copy debug log';
+                copyBtn.className = 'btn btn-secondary';
+                copyBtn.style.cssText = 'margin-top:8px; font-size:0.8rem; padding:6px 12px;';
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(logText);
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyBtn.textContent = 'Copy debug log'; }, 1500);
+                });
+                details.appendChild(copyBtn);
+
+                box.appendChild(details);
+            }
 
             mapDiv.appendChild(box);
         };
