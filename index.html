@@ -1197,17 +1197,21 @@
             scanDebugLog = [];
             console.log('[TimeSnap OCR] Starting scan on image', bitmap.width + 'x' + bitmap.height);
 
-            // Vote pool: code -> { count, totalConfidence, bestConfidence }
-            // Accepting the very first pattern-shaped match (the old approach)
-            // is how a single garbage read like "T4CTEEG" slipped through with
-            // a confident-looking "Read OK" badge. Now a code only wins if
-            // multiple independent strategies agree, or one read is very
-            // high-confidence on its own.
+            // Vote pool: code -> { geometryKeys: Set, totalConfidence, bestConfidence }
+            // Real bug found from live debug logs: two different *modes*
+            // (hist-eq, bright-190) landed on the same wrong text
+            // ("19Z9N94") because they were both processing the exact same
+            // crop region — that's not independent confirmation, it's the
+            // same wrong pixels fooling two filters the same way. Agreement
+            // now only counts when it comes from genuinely different crop
+            // GEOMETRY (different rotation/edge/ratio), tracked via
+            // geometryKey, not merely a different color-processing mode.
             const candidates = new Map();
-            const record = (code, confidence) => {
-                const c = candidates.get(code) || { count: 0, totalConfidence: 0, bestConfidence: 0 };
-                c.count += 1;
+            const record = (code, confidence, geometryKey) => {
+                const c = candidates.get(code) || { geometryKeys: new Set(), totalConfidence: 0, bestConfidence: 0, hits: 0 };
+                c.geometryKeys.add(geometryKey);
                 c.totalConfidence += confidence;
+                c.hits += 1;
                 c.bestConfidence = Math.max(c.bestConfidence, confidence);
                 candidates.set(code, c);
                 return c;
@@ -1215,18 +1219,19 @@
             const pickBest = () => {
                 let bestCode = null, bestScore = -1, bestConf = 0;
                 for (const [code, c] of candidates.entries()) {
-                    const avgConf = c.totalConfidence / c.count;
-                    // Agreement across strategies matters far more than any
-                    // single confidence number, so it dominates the score.
-                    const score = c.count * 100 + avgConf;
+                    const avgConf = c.totalConfidence / c.hits;
+                    // Geometric agreement matters far more than any single
+                    // confidence number, so it dominates the score.
+                    const score = c.geometryKeys.size * 100 + avgConf;
                     if (score > bestScore) { bestScore = score; bestCode = code; bestConf = c.bestConfidence; }
                 }
                 if (!bestCode) return null;
                 const winner = candidates.get(bestCode);
-                // Trust gate: only accept if 2+ strategies agreed, OR a single
-                // read was very confident. A lone weak guess is treated as
-                // "not found" rather than reported as a wrong answer.
-                if (winner.count >= 2 || winner.bestConfidence >= 45) {
+                // Trust gate: only accept if 2+ DIFFERENT crop regions agreed,
+                // OR a single read was very confident. A lone weak guess (or
+                // several modes agreeing on the same wrong crop) is treated
+                // as "not found" rather than reported as a wrong answer.
+                if (winner.geometryKeys.size >= 2 || winner.bestConfidence >= 45) {
                     return { code: bestCode, confidence: bestConf };
                 }
                 return null;
@@ -1236,13 +1241,12 @@
             // moment ANY candidate existed — even a single wrong, low-
             // confidence guess. Real debug logs showed this cutting the scan
             // off after ~8 attempts, having only ever tried "rotate90° top" —
-            // it never reached "bottom", the other rotation, or later tiers,
-            // because one garbage match on the first region stopped
-            // everything. This checks for a genuinely trustworthy candidate
-            // (same bar as pickBest) before allowing an early exit.
+            // it never reached "bottom", the other rotation, or later tiers.
+            // This checks for a genuinely trustworthy candidate (same bar as
+            // pickBest) before allowing an early exit.
             const hasStrongCandidate = () => {
                 for (const c of candidates.values()) {
-                    if (c.count >= 2 || c.bestConfidence >= 45) return true;
+                    if (c.geometryKeys.size >= 2 || c.bestConfidence >= 45) return true;
                 }
                 return false;
             };
@@ -1272,15 +1276,16 @@
                         for (const mode of modes) {
                             tier0Attempted++;
                             const label = `T0 rotate${rot}° ${edge} ${Math.round(ratio*100)}% ${mode}`;
+                            const geometryKey = `T0-${rot}-${edge}-${ratio}`;
                             if (stepEl) stepEl.setAttribute('data-progress', label);
                             try {
                                 const canvas = extractRegion(rotatedFull, 0, sy, RW, bandH, 0, mode);
                                 const result = await runOCROnCanvas(canvas, label);
                                 const code = result.code || extractAndRepairCode(result.text);
                                 if (code) {
-                                    const entry = record(code, result.confidence || 0);
-                                    if (entry.count >= 2) return { code, confidence: entry.bestConfidence };
-                                    if (entry.count === 1 && (result.confidence || 0) >= 55) {
+                                    const entry = record(code, result.confidence || 0, geometryKey);
+                                    if (entry.geometryKeys.size >= 2) return { code, confidence: entry.bestConfidence };
+                                    if (entry.geometryKeys.size === 1 && (result.confidence || 0) >= 55) {
                                         return { code, confidence: result.confidence };
                                     }
                                 }
@@ -1318,10 +1323,11 @@
                     const canvas = extractRegion(bitmap, s.sx, s.sy, s.sw, s.sh, s.rotate, s.mode);
                     const result = await runOCROnCanvas(canvas, `T1 ${s.name}`);
                     const code = result.code || extractAndRepairCode(result.text);
+                    const geometryKey = `T1-${s.sx}-${s.sy}-${Math.round(s.sw)}-${Math.round(s.sh)}-${s.rotate}`;
                     if (code) {
-                        const entry = record(code, result.confidence || 0);
-                        if (entry.count >= 2) return { code, confidence: entry.bestConfidence };
-                        if (entry.count === 1 && (result.confidence || 0) >= 55) {
+                        const entry = record(code, result.confidence || 0, geometryKey);
+                        if (entry.geometryKeys.size >= 2) return { code, confidence: entry.bestConfidence };
+                        if (entry.geometryKeys.size === 1 && (result.confidence || 0) >= 55) {
                             return { code, confidence: result.confidence };
                         }
                     }
@@ -1351,7 +1357,7 @@
                                 );
                                 const result = await runOCROnCanvas(canvas, `T2 desperate ${rot}° ${Math.round(w*100)}% ${mode}`);
                                 const code = result.code || extractAndRepairCode(result.text);
-                                if (code) record(code, result.confidence || 0);
+                                if (code) record(code, result.confidence || 0, `T2-${rot}-${w}`);
                             } catch (e) { /* continue */ }
                         }
                     }
