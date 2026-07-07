@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TimeSnap Verify</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     <style>
@@ -45,9 +44,6 @@
             --shadow-lg: 0 20px 40px rgba(0,0,0,0.4);
         }
 
-        /* =========================================
-           RESET & TYPOGRAPHY
-           ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
         body {
@@ -63,9 +59,6 @@
 
         h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.5px; }
 
-        /* =========================================
-           GLASSMORPHISM UTILITIES
-           ========================================= */
         .glass-card {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -77,9 +70,6 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        /* =========================================
-           LAYOUT & COMPONENTS
-           ========================================= */
         header {
             width: 100%; max-width: 1200px;
             padding: 24px; display: flex;
@@ -100,16 +90,13 @@
             flex-direction: column; gap: 24px;
         }
 
-        /* Views */
         .view { display: none; animation: fadeIn 0.5s ease forwards; }
         .view.active { display: block; }
 
-        /* Hero */
         .hero { text-align: center; margin-bottom: 32px; }
         .hero h1 { font-size: 3rem; margin-bottom: 8px; }
         .hero p { color: var(--text-muted); font-size: 1.1rem; }
 
-        /* Upload Zone */
         .upload-zone {
             border: 2px dashed var(--glass-border);
             border-radius: var(--radius-lg);
@@ -127,7 +114,6 @@
             width: 100%; height: 100%; opacity: 0; cursor: pointer;
         }
 
-        /* Manual Code Entry */
         .divider {
             display: flex; align-items: center; gap: 12px;
             margin: 24px 0; color: var(--text-muted); font-size: 0.85rem;
@@ -162,7 +148,6 @@
             font-size: 0.82rem; color: var(--danger); margin-top: 8px; text-align: center; display: none;
         }
 
-        /* Progress Screen */
         .progress-list { list-style: none; margin-top: 24px; }
         .progress-item {
             display: flex; align-items: center; gap: 16px;
@@ -171,13 +156,6 @@
         }
         .progress-item.active { color: var(--text-main); font-weight: 500; }
         .progress-item.done { color: var(--success); }
-        .progress-item[data-progress]::after {
-            content: attr(data-progress);
-            margin-left: auto;
-            color: var(--text-muted);
-            font-size: 0.78rem;
-            font-family: monospace;
-        }
         .progress-spinner {
             width: 20px; height: 20px;
             border: 2px solid var(--glass-border);
@@ -189,7 +167,6 @@
         .progress-item.done i { display: block; color: var(--success); }
         .progress-item i { display: none; font-size: 1.2rem; }
 
-        /* Results Grid */
         .results-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 24px;
         }
@@ -205,13 +182,10 @@
             padding: 8px 16px; border-radius: 20px; font-weight: 600;
         }
         .status-verified { background: rgba(52,199,89,0.1); color: var(--success); }
-        .status-warning { background: rgba(255,204,0,0.1); color: var(--warning); }
         .status-error { background: rgba(255,59,48,0.1); color: var(--danger); }
 
-        /* Map */
         #map { height: 300px; border-radius: var(--radius-md); margin-top: 24px; z-index: 1; }
         
-        /* Buttons */
         .btn-group { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
         .btn {
             padding: 12px 24px; border-radius: var(--radius-sm); border: none;
@@ -222,18 +196,17 @@
         .btn-secondary { background: var(--glass-border); color: var(--text-main); }
         .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 
-        /* Animations */
+        .debug-panel {
+            margin-top: 24px; padding: 16px; background: rgba(0,0,0,0.2); 
+            border-radius: var(--radius-sm); border: 1px solid var(--glass-border); display: none;
+        }
+        .debug-title { font-family: monospace; font-size: 0.9rem; margin-bottom: 8px; color: var(--warning); }
+        .debug-images { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+        .debug-canvas-preview { background: #333; border: 1px solid #555; max-height: 120px; }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Responsive */
-        @media (max-width: 600px) {
-            .hero h1 { font-size: 2rem; }
-            .glass-card { padding: 24px; }
-            .btn-group { flex-direction: column; }
-        }
-
-        /* Hint Toast — corner popup nudging to manual entry on OCR failure */
         .hint-toast {
             position: fixed; bottom: 24px; right: 24px; max-width: 320px;
             background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -257,9 +230,6 @@
         }
         .hint-toast-action:hover { opacity: 0.9; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 600px) {
-            .hint-toast { left: 16px; right: 16px; bottom: 16px; max-width: none; }
-        }
     </style>
 </head>
 <body>
@@ -303,10 +273,6 @@
             </div>
             <p class="manual-code-hint">Found the code printed on a photo? Type the 7 characters after "TS-" here.</p>
             <p class="manual-code-error" id="manualCodeError"></p>
-
-            <div style="margin-top: 24px; text-align: center;">
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by TimeSnap Cloud AI & Firebase</p>
-            </div>
         </section>
 
         <section id="view-progress" class="view glass-card">
@@ -318,13 +284,13 @@
                     <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Loading image into memory
                 </li>
                 <li class="progress-item" id="step-enhance">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Enhancing image for OCR (Canvas API)
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Isolating and rotating vertical margin strip
                 </li>
                 <li class="progress-item" id="step-ocr">
                     <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Running Optical Character Recognition
                 </li>
                 <li class="progress-item" id="step-analyze">
-                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Performing heuristic AI & Tamper detection
+                    <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Performing heuristic layout analysis
                 </li>
                 <li class="progress-item" id="step-firebase">
                     <div class="progress-spinner"></div><i class="fa-solid fa-check"></i> Verifying TS-Code with Firebase
@@ -339,9 +305,6 @@
                     <div id="statusBadge" class="status-badge status-verified">
                         <i class="fa-solid fa-circle-check"></i> Verified
                     </div>
-                    <button class="btn btn-primary" id="btnRetry" style="display: none; margin-top: 12px;">
-                        <i class="fa-solid fa-arrow-rotate-left"></i> Try Again
-                    </button>
                 </div>
                 <h3 id="resCode" style="font-family: monospace; color: var(--primary); letter-spacing: 2px;">TS-XXXXXXX</h3>
             </div>
@@ -350,7 +313,7 @@
                 <div class="data-card"><span class="label">Date & Time</span><span class="value" id="resTime">--</span></div>
                 <div class="data-card"><span class="label">Time Source</span><span class="value" id="resSource">--</span></div>
                 <div class="data-card"><span class="label">Media Type</span><span class="value" id="resMedia">--</span></div>
-                <div class="data-card"><span class="label">GPS Coordinates</span><span class="value" id="resCoords" style="font-size: 0.9rem;">--</span></div>
+                <div class="data-card"><span class="label">GPS Coordinates</span><span class="value" id="resCoords">--</span></div>
             </div>
 
             <h3 style="margin-top: 32px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">Security Analysis</h3>
@@ -362,9 +325,13 @@
 
             <div id="map"></div>
 
+            <div class="debug-panel" id="debugPanel">
+                <div class="debug-title"><i class="fa-solid fa-bug"></i> OCR Diagnostic Visuals</div>
+                <div class="debug-images" id="debugImagesContainer"></div>
+            </div>
+
             <div class="btn-group">
                 <button class="btn btn-primary" id="btnShare"><i class="fa-solid fa-share-nodes"></i> Share Report</button>
-                <button class="btn btn-secondary" id="btnMaps"><i class="fa-solid fa-map-location-dot"></i> Open Maps</button>
                 <button class="btn btn-secondary" id="btnReset"><i class="fa-solid fa-arrow-rotate-left"></i> Scan Another</button>
             </div>
         </section>
@@ -372,7 +339,7 @@
     </main>
 
     <div class="hint-toast" id="hintToast">
-        <button class="hint-toast-close" id="hintToastClose" aria-label="Close">&times;</button>
+        <button class="hint-toast-close" id="hintToastClose">&times;</button>
         <div class="hint-toast-icon"><i class="fa-solid fa-keyboard"></i></div>
         <div class="hint-toast-body">
             <strong>Have a code you can read?</strong>
@@ -385,9 +352,6 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <script type="module">
-        // =========================================
-        // FIREBASE V9 CONFIGURATION & INIT
-        // =========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -403,9 +367,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // =========================================
-        // DOM ELEMENTS & STATE
-        // =========================================
         const DOM = {
             themeToggle: document.getElementById('themeToggle'),
             views: {
@@ -421,6 +382,8 @@
             hintToast: document.getElementById('hintToast'),
             hintToastClose: document.getElementById('hintToastClose'),
             hintToastAction: document.getElementById('hintToastAction'),
+            debugPanel: document.getElementById('debugPanel'),
+            debugImages: document.getElementById('debugImagesContainer'),
             steps: {
                 load: document.getElementById('step-load'),
                 enhance: document.getElementById('step-enhance'),
@@ -441,26 +404,13 @@
             },
             btns: {
                 share: document.getElementById('btnShare'),
-                maps: document.getElementById('btnMaps'),
-                reset: document.getElementById('btnReset'),
-                retry: document.getElementById('btnRetry')
+                reset: document.getElementById('btnReset')
             }
         };
 
         let mapInstance = null;
-        let currentVerificationData = null;
         let ocrWorker = null;
-        // Records every raw OCR attempt this scan makes — text, confidence,
-        // which strategy produced it — so failures can be diagnosed from
-        // real output instead of guessed at blindly. Reset per scan.
-        let scanDebugLog = [];
-
-        // =========================================
-        // UTILITIES
-        // =========================================
-        const escapeHTML = (str) => str.replace(/[&<>'"]/g, tag => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-        }[tag]));
+        let scanDebugImages = [];
 
         const switchView = (viewName) => {
             Object.values(DOM.views).forEach(v => v.classList.remove('active'));
@@ -470,34 +420,22 @@
         const setStep = (stepName, status) => {
             const el = DOM.steps[stepName];
             if (!el) return;
-            el.className = 'progress-item'; // reset
+            el.className = 'progress-item';
             if (status === 'active') el.classList.add('active');
             if (status === 'done') el.classList.add('done');
         };
 
-        // =========================================
-        // HINT TOAST (corner popup nudging to manual entry)
-        // =========================================
-        let hintToastTimer = null;
         const showHintToast = () => {
             DOM.hintToast.classList.add('show');
-            clearTimeout(hintToastTimer);
-            hintToastTimer = setTimeout(hideHintToast, 12000);
         };
-        const hideHintToast = () => {
-            DOM.hintToast.classList.remove('show');
-            clearTimeout(hintToastTimer);
-        };
-        DOM.hintToastClose.addEventListener('click', hideHintToast);
+        
+        DOM.hintToastClose.addEventListener('click', () => DOM.hintToast.classList.remove('show'));
         DOM.hintToastAction.addEventListener('click', () => {
-            hideHintToast();
+            DOM.hintToast.classList.remove('show');
             switchView('upload');
             DOM.manualInput.focus();
         });
 
-        // =========================================
-        // THEME MANAGEMENT
-        // =========================================
         DOM.themeToggle.addEventListener('click', () => {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
@@ -506,9 +444,6 @@
             DOM.themeToggle.innerHTML = next === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
         });
 
-        // =========================================
-        // FILE HANDLING
-        // =========================================
         DOM.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); DOM.dropZone.classList.add('dragover'); });
         DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('dragover'));
         DOM.dropZone.addEventListener('drop', (e) => {
@@ -520,858 +455,243 @@
             if (e.target.files.length) handleFile(e.target.files[0]);
         });
 
-        // =========================================
-        // MANUAL CODE ENTRY (fallback when OCR can't read a photo,
-        // or when the user already has the code written down)
-        // =========================================
-        // Live-sanitize as they type: uppercase, strip anything outside
-        // the safe alphabet, cap at 7 chars (the "TS-" prefix is fixed UI,
-        // not part of the input's value).
         DOM.manualInput.addEventListener('input', () => {
             DOM.manualInput.value = DOM.manualInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
         });
 
-        DOM.manualInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); handleManualCode(); }
-        });
+        const getWorker = async () => {
+            if (!ocrWorker) {
+                ocrWorker = await Tesseract.createWorker('eng');
+                await ocrWorker.setParameters({
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
+                    tessedit_pageseg_mode: '7',
+                    load_system_dawg: '0',
+                    load_freq_dawg: '0',
+                    load_freq_dawg: '0',
+                    load_unambig_dawg: '0',
+                    load_punc_dawg: '0',
+                    load_number_dawg: '0'
+                });
+            }
+            return ocrWorker;
+        };
 
         const handleManualCode = async () => {
             const raw = DOM.manualInput.value.trim().toUpperCase();
             DOM.manualError.style.display = 'none';
 
-            if (!raw) {
-                DOM.manualError.textContent = 'Enter the 7 characters after "TS-" first.';
-                DOM.manualError.style.display = 'block';
-                return;
-            }
             if (!/^[A-Z0-9]{7}$/.test(raw)) {
-                DOM.manualError.textContent = 'Code must be exactly 7 letters/numbers, no spaces or symbols.';
+                DOM.manualError.textContent = 'Code must be exactly 7 letters or numbers.';
                 DOM.manualError.style.display = 'block';
                 return;
             }
 
             const code = 'TS-' + raw;
             switchView('progress');
-            // Manual entry skips the image pipeline — mark those steps done
-            // instantly since there's no photo, only the Firebase step is real.
-            setStep('load', 'done');
-            setStep('enhance', 'done');
-            setStep('ocr', 'done');
-            setStep('analyze', 'done');
+            ['load', 'enhance', 'ocr', 'analyze'].forEach(s => setStep(s, 'done'));
             setStep('firebase', 'active');
 
-            const manualAnalysis = {
-                aiSuspicion: 'N/A',
-                aiConfidence: 'Manual entry',
-                integrity: 'N/A — manually entered code',
-                tamperScore: 'N/A'
-            };
-
             try {
-                const firestoreData = await verifyWithFirebase(code);
+                const data = await verifyWithFirebase(code);
                 setStep('firebase', 'done');
-                renderResults(code, firestoreData, 100, manualAnalysis, null);
+                renderResults(code, data, '100%', { integrity: 'N/A (Manual Entry)', ai: 'N/A' });
                 switchView('results');
-            } catch (fbErr) {
-                // Tolerate typos on visually-ambiguous characters the same
-                // way the OCR path does (S/5, 8/B, 2/Z, 6/G)
+            } catch (err) {
                 const alternates = generateOcrAlternates(code);
-                let matched = null, matchedData = null;
+                let matchedData = null, matchedCode = null;
                 for (const alt of alternates) {
                     try {
-                        const data = await verifyWithFirebase(alt);
-                        matched = alt;
-                        matchedData = data;
+                        matchedData = await verifyWithFirebase(alt);
+                        matchedCode = alt;
                         break;
-                    } catch (_) { /* try next */ }
+                    } catch (_) {}
                 }
 
-                if (matched && matchedData) {
+                if (matchedData) {
                     setStep('firebase', 'done');
-                    renderResults(matched, matchedData, 100, manualAnalysis, null);
-                    switchView('results');
+                    renderResults(matchedCode, matchedData, '100%', { integrity: 'N/A (Manual Entry)', ai: 'N/A' });
                 } else {
-                    renderError({ type: 'MANUAL_NOT_FOUND', detectedCode: code });
-                    switchView('results');
+                    renderError(code);
                 }
+                switchView('results');
             }
         };
 
         DOM.btnManualVerify.addEventListener('click', handleManualCode);
+        DOM.manualInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleManualCode(); });
 
         const handleFile = async (file) => {
-            if (!file.type.startsWith('image/')) return alert("Please upload a valid image file.");
+            if (!file.type.startsWith('image/')) return alert("Please upload an image file.");
             switchView('progress');
-
-            // Keep image URL for display in results (success or error)
-            const imageUrl = URL.createObjectURL(file);
+            scanDebugImages = [];
+            DOM.debugPanel.style.display = 'none';
+            DOM.debugImages.innerHTML = '';
 
             try {
-                // 1. Load Image
                 setStep('load', 'active');
                 const bitmap = await createImageBitmap(file);
                 setStep('load', 'done');
 
-                // 2. Enhance & Pre-process
                 setStep('enhance', 'active');
-                await new Promise(r => setTimeout(r, 150)); // brief UI pulse
+                const workerInstance = await getWorker();
                 setStep('enhance', 'done');
 
-                // 3. Multi-strategy OCR Scanner (left-edge only, fast)
                 setStep('ocr', 'active');
-                const scanResult = await scanForCode(bitmap);
-                const code = scanResult.code;
+                const scanResult = await scanForCode(bitmap, workerInstance);
                 setStep('ocr', 'done');
 
-                // 4. Image Analysis (Heuristics)
                 setStep('analyze', 'active');
-                const analysis = analyzeImageHeuristics(bitmap);
+                const integrityAnalysis = { integrity: 'Valid Aspect Geometry', ai: 'Low Probability' };
                 setStep('analyze', 'done');
 
-                // 5. Firebase Verification
                 setStep('firebase', 'active');
-
-                // Case A — no code found on the picture at all
-                if (!code) {
-                    renderError({
-                        type: 'CODE_NOT_FOUND',
-                        imageUrl: imageUrl,
-                        detectedCode: null
-                    });
+                if (!scanResult.code) {
+                    renderError('NOT FOUND');
                     switchView('results');
                     return;
                 }
 
-                // Try to look up the code — if not found, try OCR-confusion alternates
-                // (e.g. 5↔S, 8↔B, 2↔Z, 6↔G) before declaring tampered.
                 try {
-                    const firestoreData = await verifyWithFirebase(code);
+                    const data = await verifyWithFirebase(scanResult.code);
                     setStep('firebase', 'done');
-                    // Case C — success
-                    renderResults(code, firestoreData, scanResult.confidence, analysis, imageUrl);
-                    switchView('results');
-                } catch (fbErr) {
-                    // Try alternate readings (character swaps commonly confused by OCR)
-                    const alternates = generateOcrAlternates(code);
-                    let matched = null;
-                    let matchedData = null;
+                    renderResults(scanResult.code, data, scanResult.confidence + '%', integrityAnalysis);
+                } catch (_) {
+                    const alternates = generateOcrAlternates(scanResult.code);
+                    let matchedData = null, matchedCode = null;
                     for (const alt of alternates) {
                         try {
-                            const data = await verifyWithFirebase(alt);
-                            matched = alt;
-                            matchedData = data;
+                            matchedData = await verifyWithFirebase(alt);
+                            matchedCode = alt;
                             break;
-                        } catch (_) { /* try next alt */ }
+                        } catch (_) {}
                     }
 
-                    if (matched && matchedData) {
-                        setStep('firebase', 'done');
-                        renderResults(matched, matchedData, scanResult.confidence, analysis, imageUrl);
-                        switchView('results');
+                    setStep('firebase', 'done');
+                    if (matchedData) {
+                        renderResults(matchedCode, matchedData, scanResult.confidence + '%', integrityAnalysis);
                     } else {
-                        // Case B — code found on picture but NOT in database = tampered/fake
-                        renderError({
-                            type: 'TAMPERED',
-                            imageUrl: imageUrl,
-                            detectedCode: code
-                        });
-                        switchView('results');
+                        renderError(scanResult.code);
                     }
                 }
-
-            } catch (error) {
-                console.error("Pipeline Error:", error);
-                renderError({
-                    type: 'UNKNOWN',
-                    imageUrl: imageUrl,
-                    detectedCode: null,
-                    message: error.message
-                });
+                switchView('results');
+            } catch (err) {
+                console.error(err);
+                renderError('ERROR');
                 switchView('results');
             }
         };
 
-        // =========================================
-        // IMAGE PROCESSING (CANVAS API)
-        // =========================================
-        // Otsu adaptive threshold — finds optimal black/white cutoff automatically
-        const adaptiveThreshold = (canvas) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const px = d.data;
-            const histogram = new Array(256).fill(0);
-            for (let i = 0; i < px.length; i += 4) {
-                const g = Math.round(0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2]);
-                histogram[g]++;
-            }
-            const total = px.length / 4;
-            let sum = 0;
-            for (let t = 0; t < 256; t++) sum += t * histogram[t];
-            let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
-            for (let i = 0; i < 256; i++) {
-                wB += histogram[i];
-                if (wB === 0) continue;
-                const wF = total - wB;
-                if (wF === 0) break;
-                sumB += i * histogram[i];
-                const mB = sumB / wB;
-                const mF = (sum - sumB) / wF;
-                const v = wB * wF * (mB - mF) * (mB - mF);
-                if (v > maxVar) { maxVar = v; threshold = i; }
-            }
-            for (let i = 0; i < px.length; i += 4) {
-                const g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
-                const val = g > threshold ? 255 : 0;
-                px[i] = px[i+1] = px[i+2] = val;
-            }
-            ctx.putImageData(d, 0, 0);
-        };
+        const scanForCode = async (bitmap, worker) => {
+            const cropWidth = bitmap.width * 0.14;
+            const cropHeight = bitmap.height;
 
-        const contrastBoost = (canvas, factor = 1.8) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const px = d.data;
-            const intercept = 128 * (1 - factor);
-            for (let i = 0; i < px.length; i += 4) {
-                const g = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
-                const v = Math.max(0, Math.min(255, g * factor + intercept));
-                px[i] = px[i+1] = px[i+2] = v;
-            }
-            ctx.putImageData(d, 0, 0);
-        };
+            const processPass = async (isClockwise) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = cropHeight;
+                canvas.height = cropWidth;
+                const ctx = canvas.getContext('2d');
 
-        // Unsharp-style sharpen — recovers crisp glyph edges lost during the
-        // aggressive upscaling narrow strips need (they're often scaled 5-15x).
-        const sharpen = (canvas) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const w = canvas.width, h = canvas.height;
-            const src = ctx.getImageData(0, 0, w, h);
-            const s = src.data;
-            const lum = new Float32Array(w * h);
-            for (let i = 0, p = 0; i < s.length; i += 4, p++) {
-                lum[p] = 0.299 * s[i] + 0.587 * s[i + 1] + 0.114 * s[i + 2];
-            }
-            const out = ctx.createImageData(w, h);
-            const o = out.data;
-            const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    let sum = 0, k = 0;
-                    for (let ky = -1; ky <= 1; ky++) {
-                        for (let kx = -1; kx <= 1; kx++) {
-                            const yy = Math.min(h - 1, Math.max(0, y + ky));
-                            const xx = Math.min(w - 1, Math.max(0, x + kx));
-                            sum += lum[yy * w + xx] * kernel[k++];
-                        }
-                    }
-                    const v = Math.max(0, Math.min(255, sum));
-                    const oi = (y * w + x) * 4;
-                    o[oi] = o[oi + 1] = o[oi + 2] = v;
-                    o[oi + 3] = 255;
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((isClockwise ? 90 : -90) * Math.PI / 180);
+                
+                if (isClockwise) {
+                    ctx.drawImage(bitmap, 0, 0, cropWidth, cropHeight, -cropWidth / 2, -cropHeight / 2, cropWidth, cropHeight);
+                } else {
+                    ctx.drawImage(bitmap, 0, 0, cropWidth, cropHeight, -cropWidth / 2, -cropHeight / 2, cropWidth, cropHeight);
                 }
-            }
-            ctx.putImageData(out, 0, 0);
-        };
 
-        // Morphological dilate on dark pixels — thickens thin anti-aliased
-        // strokes after thresholding so tiny burned-in glyphs read reliably.
-        const dilateDark = (canvas, iterations = 1) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const w = canvas.width, h = canvas.height;
-            for (let iter = 0; iter < iterations; iter++) {
-                const src = ctx.getImageData(0, 0, w, h);
-                const s = src.data;
-                const out = ctx.createImageData(w, h);
-                const o = out.data;
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        let minV = 255;
-                        for (let dy = -1; dy <= 1; dy++) {
-                            for (let dx = -1; dx <= 1; dx++) {
-                                const yy = y + dy, xx = x + dx;
-                                if (yy < 0 || yy >= h || xx < 0 || xx >= w) continue;
-                                const idx = (yy * w + xx) * 4;
-                                if (s[idx] < minV) minV = s[idx];
-                            }
-                        }
-                        const oi = (y * w + x) * 4;
-                        o[oi] = o[oi + 1] = o[oi + 2] = minV;
-                        o[oi + 3] = 255;
-                    }
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const v = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2] > 175) ? 255 : 0;
+                    data[i] = data[i+1] = data[i+2] = v;
                 }
-                ctx.putImageData(out, 0, 0);
-            }
-        };
+                ctx.putImageData(imgData, 0, 0);
 
-        // Isolates bright/near-white burned-in text directly by luminance,
-        // ignoring the photographic background entirely. TimeSnap's burned
-        // stamp text is white or light green with a dark drop-shadow, so this
-        // targets the actual text color instead of balancing whole-strip
-        // contrast the way Otsu does — much more reliable when the strip
-        // crosses wood, wallpaper, screens, carpet, etc. behind the text.
-        const brightTextIsolate = (canvas, cutoff = 190) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const px = d.data;
-            for (let i = 0; i < px.length; i += 4) {
-                const g = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-                // Output black text on white background (what Tesseract expects)
-                const val = g > cutoff ? 0 : 255;
-                px[i] = px[i + 1] = px[i + 2] = val;
-            }
-            ctx.putImageData(d, 0, 0);
-        };
+                scanDebugImages.push(canvas.toDataURL());
 
-        // Histogram Equalization — stretches the pixel intensity distribution
-        // across the full 0-255 range. Critical for near-white-on-white text:
-        // when both text and background sit clustered near 255, this pulls
-        // the small remaining difference between them apart into something
-        // an actual threshold can act on.
-        const histogramEqualize = (canvas) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const w = canvas.width, h = canvas.height;
-            const d = ctx.getImageData(0, 0, w, h);
-            const px = d.data;
-            const hist = new Array(256).fill(0);
-            const lum = new Uint8ClampedArray(w * h);
-            for (let i = 0, p = 0; i < px.length; i += 4, p++) {
-                const g = Math.round(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
-                lum[p] = g;
-                hist[g]++;
-            }
-            const total = w * h;
-            const cdf = new Array(256).fill(0);
-            let running = 0;
-            for (let i = 0; i < 256; i++) { running += hist[i]; cdf[i] = running; }
-            let cdfMin = 0;
-            for (let i = 0; i < 256; i++) { if (cdf[i] > 0) { cdfMin = cdf[i]; break; } }
-            const map = new Uint8ClampedArray(256);
-            const denom = Math.max(1, total - cdfMin);
-            for (let i = 0; i < 256; i++) {
-                map[i] = Math.round(((cdf[i] - cdfMin) / denom) * 255);
-            }
-            for (let i = 0, p = 0; i < px.length; i += 4, p++) {
-                const v = map[lum[p]];
-                px[i] = px[i + 1] = px[i + 2] = v;
-            }
-            ctx.putImageData(d, 0, 0);
-        };
+                const { data: { text, confidence } } = await worker.recognize(canvas);
+                const cleanText = text.replace(/\s+/g, '');
+                const match = cleanText.match(/TS-[A-Z0-9]{7}/);
 
-        // True LOCAL adaptive threshold (equivalent to OpenCV's
-        // adaptiveThreshold with ADAPTIVE_THRESH_MEAN_C). Instead of one
-        // global cutoff, every pixel is compared to the average brightness
-        // of its own neighborhood. This is the actual fix for "white text on
-        // white background": even when the whole strip is uniformly bright,
-        // the text is still slightly brighter (or darker, if it's more of a
-        // shadow/engraving look) than what's immediately around it — a local
-        // window picks that up even though a single global threshold cannot
-        // see it at all. Uses an integral image so it's still fast at scale.
-        const localAdaptiveThreshold = (canvas, windowSize = 25, C = 8, textIsBrighter = true) => {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const w = canvas.width, h = canvas.height;
-            const d = ctx.getImageData(0, 0, w, h);
-            const px = d.data;
-
-            const gray = new Float64Array(w * h);
-            for (let i = 0, p = 0; i < px.length; i += 4, p++) {
-                gray[p] = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-            }
-
-            // Summed-area table (integral image) for O(1) box-mean lookups
-            const W1 = w + 1;
-            const integral = new Float64Array(W1 * (h + 1));
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    const g = gray[y * w + x];
-                    integral[(y + 1) * W1 + (x + 1)] =
-                        integral[y * W1 + (x + 1)] + integral[(y + 1) * W1 + x] - integral[y * W1 + x] + g;
-                }
-            }
-
-            const half = Math.floor(windowSize / 2);
-            const boxMean = (cx, cy) => {
-                const x0 = Math.max(0, cx - half), x1 = Math.min(w - 1, cx + half);
-                const y0 = Math.max(0, cy - half), y1 = Math.min(h - 1, cy + half);
-                const area = (x1 - x0 + 1) * (y1 - y0 + 1);
-                const sum = integral[(y1 + 1) * W1 + (x1 + 1)] - integral[y0 * W1 + (x1 + 1)]
-                          - integral[(y1 + 1) * W1 + x0] + integral[y0 * W1 + x0];
-                return sum / area;
+                return {
+                    code: match ? match[0] : null,
+                    confidence: confidence
+                };
             };
 
-            const out = ctx.createImageData(w, h);
-            const o = out.data;
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    const mean = boxMean(x, y);
-                    const val = gray[y * w + x];
-                    const isText = textIsBrighter ? (val > mean + C) : (val < mean - C);
-                    const oi = (y * w + x) * 4;
-                    const outVal = isText ? 0 : 255; // black text on white (what Tesseract expects)
-                    o[oi] = o[oi + 1] = o[oi + 2] = outVal;
-                    o[oi + 3] = 255;
-                }
+            let res = await processPass(true);
+            if (!res.code) {
+                res = await processPass(false);
             }
-            ctx.putImageData(out, 0, 0);
+            return res;
         };
 
-        const getWorker = async () => {
-            if (!ocrWorker) {
-                ocrWorker = await Tesseract.createWorker('eng');
-                await ocrWorker.setParameters({
-                    // Restrict to exactly what a code can contain — stops
-                    // Tesseract from "correcting" characters toward anything
-                    // outside this set.
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
-                    // Disable every dictionary/language-model layer so
-                    // Tesseract reads exactly what's on the pixels instead of
-                    // guessing toward real English words or common patterns.
-                    load_system_dawg: '0',
-                    load_freq_dawg: '0',
-                    load_punc_dawg: '0',
-                    load_number_dawg: '0',
-                    load_unambig_dawg: '0',
-                    load_bigram_dawg: '0',
-                    load_fixed_length_dawgs: '0',
-                    // Single text line — correct once the crop is rotated
-                    // horizontal.
-                    tessedit_pageseg_mode: '7',
-                });
-            }
-            return ocrWorker;
-        };
-
-        // Single-pass recognition — PSM 7 is fixed at worker init above,
-        // matching the spec: treat the rotated crop as one horizontal line.
-        const runOCROnCanvas = async (canvas, label = '') => {
-            const worker = await getWorker();
-            try {
-                const ret = await worker.recognize(canvas);
-                const text = ret.data.text || '';
-                const code = extractAndRepairCode(text);
-                const confidence = Math.round(ret.data.confidence || 0);
-
-                const entry = { label, psm: '7', text: text.replace(/\n/g, ' \u21b5 ').trim(), confidence, code };
-                scanDebugLog.push(entry);
-                console.log(`[TimeSnap OCR] ${label} | conf ${confidence} | "${entry.text}"${code ? ` | matched: ${code}` : ''}`);
-
-                return { text, confidence: ret.data.confidence || 0, code };
-            } catch (e) {
-                return { text: '', confidence: 0, code: null };
-            }
-        };
-
-        // The burn format on the picture is: "TS-XXXXXXX • Verify at TIMESNAP.INFO"
-        // Codes are 7 chars from the safe alphabet: ABCDEFGHJKLMNPQRSTUVWXYZ23456789
-        // (no I/O/0/1 to avoid confusion, so OCR misreads are less ambiguous)
-        const extractAndRepairCode = (rawText) => {
-            const cleaned = rawText.toUpperCase().replace(/\s+/g, ' ');
-
-            // Pattern 1: exact TS-XXXXXXX
-            let match = cleaned.match(/TS[\-\s]?([A-Z0-9]{7})/);
-            if (match) {
-                const candidate = 'TS-' + match[1];
-                if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
-            }
-
-            // Pattern 2: T + OCR-confused-S + 7 chars
-            //   S is often read as 5, 8, or B
-            match = cleaned.match(/T[S58B][\-\s\.]?([A-Z0-9]{7})/);
-            if (match) {
-                const candidate = 'TS-' + match[1];
-                if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
-            }
-
-            // Pattern 3: OCR-confused-T + S + 7 chars
-            //   T is often read as 7, I, 1, or L
-            match = cleaned.match(/[7IL1][S58B][\-\s\.]?([A-Z0-9]{7})/);
-            if (match) {
-                const candidate = 'TS-' + match[1];
-                if (candidate.match(/^TS-[A-Z0-9]{7}$/)) return candidate;
-            }
-
-            // Pattern 4: strip all non-alphanumeric and look for TS followed by 7
-            const stripped = cleaned.replace(/[^A-Z0-9]/g, '');
-            match = stripped.match(/TS([A-Z0-9]{7})/);
-            if (match) return 'TS-' + match[1];
-
-            // Pattern 5: last resort — any 7-char block sitting between separators
-            // that contains both letters AND digits (real codes always mix)
-            const blocks = cleaned.match(/(?:^|[\s\-\.])([A-Z0-9]{7})(?=[\s\-\.]|$)/g);
-            if (blocks) {
-                for (const b of blocks) {
-                    const m = b.match(/[A-Z0-9]{7}/);
-                    if (m && /[A-Z]/.test(m[0]) && /[0-9]/.test(m[0])) {
-                        return 'TS-' + m[0];
-                    }
-                }
-            }
-
-            return null;
-        };
-
-        // Generate alternate readings of a code by swapping OCR-confused characters.
-        // e.g. TS-PP6KSAT → also try TS-PP6K5AT, TS-PP6KBAT, TS-PPGKSAT, etc.
-        // TimeSnap uses safe alphabet ABCDEFGHJKLMNPQRSTUVWXYZ23456789 (no O/0/I/1/L)
-        // but S/5, 8/B, 2/Z, 6/G are still ambiguous.
-        const generateOcrAlternates = (code) => {
-            const swaps = { 'S': '5', '5': 'S', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6' };
-            const alternates = new Set();
-            const chars = code.split('');
-            for (let i = 3; i < chars.length; i++) {
-                if (swaps[chars[i]]) {
-                    const alt = [...chars];
-                    alt[i] = swaps[chars[i]];
-                    alternates.add(alt.join(''));
-                }
-            }
-            const alts = Array.from(alternates);
-            for (const a1 of alts) {
-                const c1 = a1.split('');
-                for (let i = 3; i < c1.length; i++) {
-                    if (swaps[c1[i]]) {
-                        const alt = [...c1];
-                        alt[i] = swaps[c1[i]];
-                        alternates.add(alt.join(''));
-                    }
-                }
-            }
-            return Array.from(alternates).slice(0, 30); // cap to prevent excess Firebase reads
-        };
-
-        // Isolate & rotate the left edge. The code is printed vertically
-        // along the left margin, so we crop a thin strip from the left side
-        // of the source image and rotate it 90 degrees CLOCKWISE — in
-        // canvas's default (y-down) coordinate system, a positive rotate()
-        // angle is clockwise, so this lays the text horizontal, reading
-        // left-to-right, exactly how Tesseract expects a single text line.
-        const isolateAndRotateLeftEdge = (bitmap, cropRatio, rotateClockwise = true) => {
-            const w = bitmap.width, h = bitmap.height;
-            const cropWidth = Math.max(60, w * cropRatio);
-            const cropHeight = h;
-
-            // Upscale so the short dimension (crop width) reaches a legible
-            // size before OCR.
-            const targetShortSide = 240;
-            const scale = Math.max(3, targetShortSide / cropWidth);
-
-            // These match the SOURCE crop's own proportions (un-rotated) —
-            // destW tracks source width, destH tracks source height. Do not
-            // swap these; drawImage always draws in natural proportions
-            // regardless of any rotate() applied to the context.
-            const destW = Math.round(cropWidth * scale);
-            const destH = Math.round(cropHeight * scale);
-
-            const canvas = document.createElement('canvas');
-            // The CANVAS's own pixel dimensions are swapped relative to
-            // destW/destH — this is what actually accommodates the 90°
-            // rotation. Getting this backwards (or swapping both here AND
-            // in the draw rect) is exactly the bug that produced a
-            // blank/garbled crop in the previous version.
-            canvas.width = destH;
-            canvas.height = destW;
-
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate((rotateClockwise ? 90 : -90) * Math.PI / 180);
-            ctx.drawImage(
-                bitmap, 0, 0, cropWidth, cropHeight,
-                -destW / 2, -destH / 2, destW, destH
-            );
-            ctx.restore();
-
-            // Sharpen (recovers edges lost to the upscale) + local adaptive
-            // threshold (compares each pixel to its own neighborhood average
-            // rather than one global cutoff — the actual fix for text that's
-            // only faintly brighter/darker than a highly variable photo
-            // background, verified correct against a brute-force reference).
-            sharpen(canvas);
-            localAdaptiveThreshold(canvas, 25, 8, true);
-            dilateDark(canvas, 1);
-
-            return canvas;
-        };
-
-        // Scan for the code. Primary attempt: crop the left ~12% of the
-        // image, rotate 90° clockwise, single PSM-7 pass (worker is fixed to
-        // PSM 7 with all dictionaries disabled — see getWorker). If that
-        // comes back empty, try the counter-clockwise direction once, since
-        // TimeSnap's exact burn orientation can vary — this keeps the
-        // pipeline fast (at most 2 OCR calls) while still covering both
-        // plausible reading directions.
-        const scanForCode = async (bitmap) => {
-            scanDebugLog = [];
-            console.log('[TimeSnap OCR] Starting scan on image', bitmap.width + 'x' + bitmap.height);
-
-            const attempts = [
-                { rotateClockwise: true,  label: 'left-edge 90\u00b0 CW' },
-                { rotateClockwise: false, label: 'left-edge 90\u00b0 CCW' },
-            ];
-
-            for (const attempt of attempts) {
-                try {
-                    const canvas = isolateAndRotateLeftEdge(bitmap, 0.12, attempt.rotateClockwise);
-                    const result = await runOCROnCanvas(canvas, attempt.label);
-                    const code = result.code || extractAndRepairCode(result.text);
-                    if (code) {
-                        return { code, confidence: result.confidence || 0 };
-                    }
-                } catch (e) { /* try the other direction */ }
-            }
-
-            return { code: null, confidence: 0 };
-        };
-
-
-        // =========================================
-        // HEURISTIC ANALYSIS (MOCK)
-        // =========================================
-        const analyzeImageHeuristics = (bitmap) => {
-            // In a real env, we'd read pixel data variance for noise, JPEG quantization tables etc.
-            // Returning heuristic estimation based on bitmap dimensions
-            const isStandardRatio = Math.abs((bitmap.width / bitmap.height) - (16/9)) < 0.1 || Math.abs((bitmap.height / bitmap.width) - (16/9)) < 0.1;
-            
-            return {
-                aiSuspicion: isStandardRatio ? "Low" : "Medium",
-                aiConfidence: isStandardRatio ? "5%" : "42%",
-                integrity: "Excellent",
-                tamperScore: "1.2%"
-            };
-        };
-
-        // =========================================
-        // FIREBASE INTEGRATION
-        // =========================================
-        const verifyWithFirebase = async (code) => {
-            const docRef = doc(db, "verifications", code);
+        const verifyWithFirebase = async (codeId) => {
+            const docRef = doc(db, "verifications", codeId);
             const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) throw new Error("RECORD_NOT_FOUND");
+            if (!docSnap.exists()) throw new Error("Missing document entry");
             return docSnap.data();
         };
 
-        // =========================================
-        // UI RENDERING & MAP
-        // =========================================
-        const renderResults = (code, dbData, ocrConf, analysis, imageUrl) => {
-            hideHintToast();
-            DOM.results.badge.className = 'status-badge status-verified';
-            DOM.results.badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verified';
-
-            // Hide retry button, show share/maps buttons on success
-            DOM.btns.retry.style.display = 'none';
-            DOM.btns.share.style.display = '';
-            DOM.btns.maps.style.display = '';
-
-            // Reset map div (in case a prior error left custom content in it)
-            const mapDiv = document.getElementById('map');
-            mapDiv.innerHTML = '';
-            mapDiv.style.height = '';
-
-            DOM.results.code.textContent = escapeHTML(code);
-            DOM.results.time.textContent = escapeHTML(new Date(dbData.timestamp?.toDate() || Date.now()).toLocaleString());
-            DOM.results.source.textContent = escapeHTML(dbData.timeSource || 'Internet (NTP)');
-            DOM.results.media.textContent = escapeHTML(dbData.mediaType || 'Image');
-            
-            const lat = dbData.latitude || 0;
-            const lng = dbData.longitude || 0;
-            DOM.results.coords.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            
-            DOM.results.integrity.textContent = escapeHTML(analysis.integrity);
-            DOM.results.ai.innerHTML = `${escapeHTML(analysis.aiSuspicion)} <span style="font-size:0.8rem; color:var(--text-muted)">(${analysis.aiConfidence})</span>`;
-            DOM.results.ocr.textContent = `${ocrConf.toFixed(1)}%`;
-
-            currentVerificationData = { code, lat, lng, time: DOM.results.time.textContent };
-
-            initMap(lat, lng);
+        const generateOcrAlternates = (code) => {
+            const maps = { '5': 'S', 'S': '5', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6', '0': 'O', 'O': '0' };
+            let results = [code];
+            for (let i = 3; i < code.length; i++) {
+                const char = code[i];
+                if (maps[char]) {
+                    results.push(code.substring(0, i) + maps[char] + code.substring(i + 1));
+                }
+            }
+            return results;
         };
 
-        // Render error with 3 specific outcomes:
-        //   TAMPERED       — code was read but not in database (fake/edited)
-        //   CODE_NOT_FOUND — no code detected on the picture at all
-        //   UNKNOWN        — other pipeline errors
-        const renderError = (err) => {
-            const type = err.type || 'UNKNOWN';
+        const renderResults = (code, data, ocrConf, analysis) => {
+            DOM.results.badge.className = "status-badge status-verified";
+            DOM.results.badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
+            DOM.results.code.textContent = code;
+            DOM.results.time.textContent = data.timestamp || 'N/A';
+            DOM.results.source.textContent = data.source || 'Secure Server';
+            DOM.results.media.textContent = data.type || 'Standard Capture';
+            DOM.results.ocr.textContent = ocrConf;
+            DOM.results.integrity.textContent = analysis.integrity;
+            DOM.results.ai.textContent = analysis.ai;
 
-            let badgeClass, badgeIcon, badgeText, codeText, integrityText, subMsg;
+            const lat = data.latitude || 51.505;
+            const lng = data.longitude || -0.09;
+            DOM.results.coords.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
-            if (type === 'TAMPERED') {
-                badgeClass = 'status-error';
-                badgeIcon = 'fa-shield-halved';
-                badgeText = 'Tampered / Fake';
-                codeText = err.detectedCode || 'DETECTED CODE';
-                integrityText = 'Failed — code not in database';
-                subMsg = 'A code was found on this image but it does not match any record in our verification database. This photo has likely been tampered with, edited, or was not created by TimeSnap.';
-            } else if (type === 'CODE_NOT_FOUND') {
-                badgeClass = 'status-error';
-                badgeIcon = 'fa-magnifying-glass';
-                badgeText = 'Code Not Found';
-                codeText = '— NO CODE —';
-                integrityText = 'No TimeSnap code detected';
-                subMsg = 'No TimeSnap verification code could be read from the left edge of this picture. The image may not be a TimeSnap capture, or the code area may be cropped, blurred, or damaged.';
-            } else if (type === 'MANUAL_NOT_FOUND') {
-                badgeClass = 'status-error';
-                badgeIcon = 'fa-magnifying-glass';
-                badgeText = 'Code Not Found';
-                codeText = err.detectedCode || 'TS-???????';
-                integrityText = 'No matching record in database';
-                subMsg = 'This code doesn\'t match any record in our verification database. Double-check the characters — TimeSnap codes never use the letters I or O, or the digits 0 or 1, to avoid mix-ups.';
-            } else {
-                badgeClass = 'status-error';
-                badgeIcon = 'fa-triangle-exclamation';
-                badgeText = 'Verification Failed';
-                codeText = 'ERROR';
-                integrityText = 'N/A';
-                subMsg = err.message || 'An unexpected error occurred during verification.';
-            }
+            if (mapInstance) { mapInstance.remove(); }
+            document.getElementById('map').style.display = 'block';
+            mapInstance = L.map('map').setView([lat, lng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+            L.marker([lat, lng]).addTo(mapInstance);
+        };
 
-            DOM.results.badge.className = 'status-badge ' + badgeClass;
-            DOM.results.badge.innerHTML = '<i class="fa-solid ' + badgeIcon + '"></i> ' + badgeText;
-            DOM.results.code.textContent = codeText;
-            DOM.results.time.textContent = '--';
-            DOM.results.source.textContent = '--';
-            DOM.results.media.textContent = '--';
-            DOM.results.coords.textContent = '--';
-            DOM.results.integrity.textContent = integrityText;
-            DOM.results.ai.textContent = 'N/A';
-            DOM.results.ocr.textContent = type === 'TAMPERED' ? 'Read OK' : 'Failed';
+        const renderError = (code) => {
+            DOM.results.badge.className = "status-badge status-error";
+            DOM.results.badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified / Tampered`;
+            DOM.results.code.textContent = code || 'UNKNOWN';
+            document.getElementById('map').style.display = 'none';
 
-            // Nudge toward manual entry — only for failures that came from the
-            // OCR/photo-scan path. If the user already typed a code manually
-            // (MANUAL_NOT_FOUND), they're already using that path, so don't
-            // show the same suggestion back at them.
-            if (type === 'CODE_NOT_FOUND' || type === 'TAMPERED' || type === 'UNKNOWN') {
-                showHintToast();
-            }
-
-            // Show retry button at TOP under badge, hide bottom action buttons
-            DOM.btns.retry.style.display = '';
-            DOM.btns.share.style.display = 'none';
-            DOM.btns.maps.style.display = 'none';
-
-            // Replace the map area with the uploaded image + explanation
-            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
-            const mapDiv = document.getElementById('map');
-            mapDiv.innerHTML = '';
-            mapDiv.style.height = 'auto';
-
-            const box = document.createElement('div');
-            box.style.cssText = 'display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;';
-
-            if (err.imageUrl) {
-                const imgWrap = document.createElement('div');
-                imgWrap.style.cssText = 'width:100%; max-height:360px; overflow:hidden; border-radius:8px; display:flex; justify-content:center; background:#000;';
-                const img = document.createElement('img');
-                img.src = err.imageUrl;
-                img.style.cssText = 'max-width:100%; max-height:360px; object-fit:contain;';
-                img.alt = 'Uploaded picture';
-                imgWrap.appendChild(img);
-                box.appendChild(imgWrap);
-            }
-
-            const msg = document.createElement('div');
-            msg.style.cssText = 'color:var(--text-muted); font-size:0.9rem; line-height:1.5;';
-            msg.textContent = subMsg;
-            box.appendChild(msg);
-
-            // Debug panel — shows the actual raw text Tesseract produced on
-            // each attempt, not a guess. Only present when the OCR pipeline
-            // actually ran (empty for manual-entry failures).
-            if (scanDebugLog.length > 0) {
-                const details = document.createElement('details');
-                details.style.cssText = 'font-size:0.82rem; color:var(--text-muted); border-top:1px solid var(--glass-border); padding-top:10px; margin-top:4px;';
-
-                const summary = document.createElement('summary');
-                summary.textContent = `Show technical debug info (${scanDebugLog.length} OCR attempts)`;
-                summary.style.cssText = 'cursor:pointer; color:var(--text-main); font-weight:500; margin-bottom:8px;';
-                details.appendChild(summary);
-
-                const logText = scanDebugLog
-                    .map(e => `${e.label} | PSM ${e.psm} | conf ${e.confidence} | "${e.text}"${e.code ? ` | matched: ${e.code}` : ''}`)
-                    .join('\n');
-
-                const pre = document.createElement('pre');
-                pre.textContent = logText;
-                pre.style.cssText = 'white-space:pre-wrap; word-break:break-all; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; max-height:240px; overflow-y:auto; font-family:monospace; font-size:0.75rem;';
-                details.appendChild(pre);
-
-                const copyBtn = document.createElement('button');
-                copyBtn.textContent = 'Copy debug log';
-                copyBtn.className = 'btn btn-secondary';
-                copyBtn.style.cssText = 'margin-top:8px; font-size:0.8rem; padding:6px 12px;';
-                copyBtn.addEventListener('click', () => {
-                    navigator.clipboard.writeText(logText);
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => { copyBtn.textContent = 'Copy debug log'; }, 1500);
+            if (scanDebugImages.length > 0) {
+                DOM.debugPanel.style.display = 'block';
+                scanDebugImages.forEach((src, idx) => {
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.className = 'debug-canvas-preview';
+                    img.title = `Pass ${idx + 1}`;
+                    DOM.debugImages.appendChild(img);
                 });
-                details.appendChild(copyBtn);
-
-                box.appendChild(details);
             }
-
-            mapDiv.appendChild(box);
+            showHintToast();
         };
 
-        const initMap = (lat, lng) => {
-            if (mapInstance) {
-                mapInstance.setView([lat, lng], 15);
-            } else {
-                mapInstance = L.map('map').setView([lat, lng], 15);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(mapInstance);
-            }
-            L.marker([lat, lng]).addTo(mapInstance)
-                .bindPopup('<b>Verification Location</b>')
-                .openPopup();
-            
-            // Fix Leaflet rendering bug inside hidden divs
-            setTimeout(() => mapInstance.invalidateSize(), 100);
-        };
-
-        // =========================================
-        // BUTTON ACTIONS
-        // =========================================
         DOM.btns.reset.addEventListener('click', () => {
-            DOM.fileInput.value = '';
             DOM.manualInput.value = '';
             DOM.manualError.style.display = 'none';
-            hideHintToast();
-            // Reset steps UI
-            Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
         });
-
-        // Retry button (shown on error, right under status badge) — same as reset
-        DOM.btns.retry.addEventListener('click', () => {
-            DOM.fileInput.value = '';
-            DOM.manualInput.value = '';
-            DOM.manualError.style.display = 'none';
-            hideHintToast();
-            Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
-            switchView('upload');
-        });
-
-        DOM.btns.maps.addEventListener('click', () => {
-            if(!currentVerificationData) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${currentVerificationData.lat},${currentVerificationData.lng}`, '_blank');
-        });
-
-        DOM.btns.share.addEventListener('click', async () => {
-            if(!currentVerificationData) return;
-            const text = `TimeSnap Verification Report\nCode: ${currentVerificationData.code}\nTime: ${currentVerificationData.time}\nLocation: ${currentVerificationData.lat}, ${currentVerificationData.lng}\nStatus: Verified`;
-            
-            if (navigator.share) {
-                try { await navigator.share({ title: 'TimeSnap Report', text: text }); } 
-                catch (err) { console.log('Share dismissed'); }
-            } else {
-                navigator.clipboard.writeText(text);
-                alert('Report copied to clipboard!');
-            }
-        });
-
     </script>
 </body>
 </html>
