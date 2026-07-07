@@ -127,6 +127,41 @@
             width: 100%; height: 100%; opacity: 0; cursor: pointer;
         }
 
+        /* Manual Code Entry */
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 24px 0; color: var(--text-muted); font-size: 0.85rem;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--glass-border);
+        }
+        .manual-code-group {
+            display: flex; align-items: stretch; gap: 0;
+            border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+            overflow: hidden; background: rgba(255,255,255,0.02);
+        }
+        .manual-code-prefix {
+            display: flex; align-items: center; padding: 0 14px;
+            background: var(--glass-border); font-family: monospace;
+            font-weight: 700; letter-spacing: 1px; color: var(--text-main);
+            font-size: 1rem; user-select: none;
+        }
+        .manual-code-input {
+            flex: 1; border: none; background: transparent; color: var(--text-main);
+            font-family: monospace; font-size: 1rem; letter-spacing: 2px;
+            padding: 0 12px; min-width: 0; text-transform: uppercase;
+        }
+        .manual-code-input:focus { outline: none; }
+        .manual-code-input::placeholder { color: var(--text-muted); letter-spacing: 1px; }
+        .manual-code-row { display: flex; gap: 10px; margin-top: 12px; }
+        .manual-code-row .manual-code-group { flex: 1; }
+        .manual-code-hint {
+            font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; text-align: center;
+        }
+        .manual-code-error {
+            font-size: 0.82rem; color: var(--danger); margin-top: 8px; text-align: center; display: none;
+        }
+
         /* Progress Screen */
         .progress-list { list-style: none; margin-top: 24px; }
         .progress-item {
@@ -224,6 +259,22 @@
                 <p style="color: var(--text-muted); margin-top: 8px;">or click to browse files</p>
                 <input type="file" id="fileInput" accept="image/jpeg, image/png, image/webp">
             </div>
+
+            <div class="divider">OR ENTER CODE MANUALLY</div>
+
+            <div class="manual-code-row">
+                <div class="manual-code-group">
+                    <span class="manual-code-prefix">TS-</span>
+                    <input type="text" class="manual-code-input" id="manualCodeInput"
+                           placeholder="XXXXXXX" maxlength="7"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false">
+                </div>
+                <button class="btn btn-primary" id="btnManualVerify">
+                    <i class="fa-solid fa-magnifying-glass"></i> Verify
+                </button>
+            </div>
+            <p class="manual-code-hint">Found the code printed on a photo? Type the 7 characters after "TS-" here.</p>
+            <p class="manual-code-error" id="manualCodeError"></p>
 
             <div style="margin-top: 24px; text-align: center;">
                 <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by TimeSnap Cloud AI & Firebase</p>
@@ -326,6 +377,9 @@
             },
             dropZone: document.getElementById('dropZone'),
             fileInput: document.getElementById('fileInput'),
+            manualInput: document.getElementById('manualCodeInput'),
+            btnManualVerify: document.getElementById('btnManualVerify'),
+            manualError: document.getElementById('manualCodeError'),
             steps: {
                 load: document.getElementById('step-load'),
                 enhance: document.getElementById('step-enhance'),
@@ -399,6 +453,85 @@
         DOM.fileInput.addEventListener('change', (e) => {
             if (e.target.files.length) handleFile(e.target.files[0]);
         });
+
+        // =========================================
+        // MANUAL CODE ENTRY (fallback when OCR can't read a photo,
+        // or when the user already has the code written down)
+        // =========================================
+        // Live-sanitize as they type: uppercase, strip anything outside
+        // the safe alphabet, cap at 7 chars (the "TS-" prefix is fixed UI,
+        // not part of the input's value).
+        DOM.manualInput.addEventListener('input', () => {
+            DOM.manualInput.value = DOM.manualInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+        });
+
+        DOM.manualInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); handleManualCode(); }
+        });
+
+        DOM.btnManualVerify.addEventListener('click', handleManualCode);
+
+        const handleManualCode = async () => {
+            const raw = DOM.manualInput.value.trim().toUpperCase();
+            DOM.manualError.style.display = 'none';
+
+            if (!raw) {
+                DOM.manualError.textContent = 'Enter the 7 characters after "TS-" first.';
+                DOM.manualError.style.display = 'block';
+                return;
+            }
+            if (!/^[A-Z0-9]{7}$/.test(raw)) {
+                DOM.manualError.textContent = 'Code must be exactly 7 letters/numbers, no spaces or symbols.';
+                DOM.manualError.style.display = 'block';
+                return;
+            }
+
+            const code = 'TS-' + raw;
+            switchView('progress');
+            // Manual entry skips the image pipeline — mark those steps done
+            // instantly since there's no photo, only the Firebase step is real.
+            setStep('load', 'done');
+            setStep('enhance', 'done');
+            setStep('ocr', 'done');
+            setStep('analyze', 'done');
+            setStep('firebase', 'active');
+
+            const manualAnalysis = {
+                aiSuspicion: 'N/A',
+                aiConfidence: 'Manual entry',
+                integrity: 'N/A — manually entered code',
+                tamperScore: 'N/A'
+            };
+
+            try {
+                const firestoreData = await verifyWithFirebase(code);
+                setStep('firebase', 'done');
+                renderResults(code, firestoreData, 100, manualAnalysis, null);
+                switchView('results');
+            } catch (fbErr) {
+                // Tolerate typos on visually-ambiguous characters the same
+                // way the OCR path does (S/5, 8/B, 2/Z, 6/G)
+                const alternates = generateOcrAlternates(code);
+                let matched = null, matchedData = null;
+                for (const alt of alternates) {
+                    try {
+                        const data = await verifyWithFirebase(alt);
+                        matched = alt;
+                        matchedData = data;
+                        break;
+                    } catch (_) { /* try next */ }
+                }
+
+                if (matched && matchedData) {
+                    setStep('firebase', 'done');
+                    renderResults(matched, matchedData, 100, manualAnalysis, null);
+                    switchView('results');
+                } else {
+                    renderError({ type: 'MANUAL_NOT_FOUND', detectedCode: code });
+                    switchView('results');
+                }
+            }
+        };
 
         const handleFile = async (file) => {
             if (!file.type.startsWith('image/')) return alert("Please upload a valid image file.");
@@ -1005,6 +1138,13 @@
                 codeText = '— NO CODE —';
                 integrityText = 'No TimeSnap code detected';
                 subMsg = 'No TimeSnap verification code could be read from the left edge of this picture. The image may not be a TimeSnap capture, or the code area may be cropped, blurred, or damaged.';
+            } else if (type === 'MANUAL_NOT_FOUND') {
+                badgeClass = 'status-error';
+                badgeIcon = 'fa-magnifying-glass';
+                badgeText = 'Code Not Found';
+                codeText = err.detectedCode || 'TS-???????';
+                integrityText = 'No matching record in database';
+                subMsg = 'This code doesn\'t match any record in our verification database. Double-check the characters — TimeSnap codes never use the letters I or O, or the digits 0 or 1, to avoid mix-ups.';
             } else {
                 badgeClass = 'status-error';
                 badgeIcon = 'fa-triangle-exclamation';
@@ -1080,6 +1220,8 @@
         // =========================================
         DOM.btns.reset.addEventListener('click', () => {
             DOM.fileInput.value = '';
+            DOM.manualInput.value = '';
+            DOM.manualError.style.display = 'none';
             // Reset steps UI
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
@@ -1088,6 +1230,8 @@
         // Retry button (shown on error, right under status badge) — same as reset
         DOM.btns.retry.addEventListener('click', () => {
             DOM.fileInput.value = '';
+            DOM.manualInput.value = '';
+            DOM.manualError.style.display = 'none';
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
         });
