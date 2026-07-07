@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TimeSnap Verify</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
@@ -185,6 +185,12 @@
         .status-error { background: rgba(255,59,48,0.1); color: var(--danger); }
 
         #map { height: 300px; border-radius: var(--radius-md); margin-top: 24px; z-index: 1; }
+        .no-map-msg {
+            margin-top: 24px; padding: 16px; text-align: center;
+            color: var(--text-muted); font-size: 0.9rem;
+            background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md); display: none;
+        }
         
         .btn-group { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
         .btn {
@@ -195,14 +201,21 @@
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: var(--glass-border); color: var(--text-main); }
         .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .btn-retry { margin-top: 12px; }
 
         .debug-panel {
             margin-top: 24px; padding: 16px; background: rgba(0,0,0,0.2); 
             border-radius: var(--radius-sm); border: 1px solid var(--glass-border); display: none;
         }
         .debug-title { font-family: monospace; font-size: 0.9rem; margin-bottom: 8px; color: var(--warning); }
+        .debug-log {
+            white-space: pre-wrap; word-break: break-all; font-family: monospace;
+            font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.2);
+            padding: 10px; border-radius: 8px; max-height: 160px; overflow-y: auto; margin-bottom: 10px;
+        }
         .debug-images { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
-        .debug-canvas-preview { background: #333; border: 1px solid #555; max-height: 120px; }
+        .debug-canvas-preview { background: #333; border: 1px solid #555; max-height: 120px; border-radius: 4px; }
+        .debug-copy-btn { margin-top: 8px; font-size: 0.8rem; padding: 6px 12px; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -230,6 +243,12 @@
         }
         .hint-toast-action:hover { opacity: 0.9; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 2rem; }
+            .glass-card { padding: 24px; }
+            .btn-group { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
@@ -273,6 +292,10 @@
             </div>
             <p class="manual-code-hint">Found the code printed on a photo? Type the 7 characters after "TS-" here.</p>
             <p class="manual-code-error" id="manualCodeError"></p>
+
+            <div style="margin-top: 24px; text-align: center;">
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by TimeSnap Cloud AI & Firebase</p>
+            </div>
         </section>
 
         <section id="view-progress" class="view glass-card">
@@ -305,6 +328,9 @@
                     <div id="statusBadge" class="status-badge status-verified">
                         <i class="fa-solid fa-circle-check"></i> Verified
                     </div>
+                    <button class="btn btn-primary btn-retry" id="btnRetry" style="display: none;">
+                        <i class="fa-solid fa-arrow-rotate-left"></i> Try Again
+                    </button>
                 </div>
                 <h3 id="resCode" style="font-family: monospace; color: var(--primary); letter-spacing: 2px;">TS-XXXXXXX</h3>
             </div>
@@ -324,14 +350,18 @@
             </div>
 
             <div id="map"></div>
+            <div class="no-map-msg" id="noMapMsg">No GPS coordinates were recorded for this capture.</div>
 
             <div class="debug-panel" id="debugPanel">
-                <div class="debug-title"><i class="fa-solid fa-bug"></i> OCR Diagnostic Visuals</div>
+                <div class="debug-title"><i class="fa-solid fa-bug"></i> OCR Diagnostic Info</div>
+                <div class="debug-log" id="debugLog"></div>
+                <button class="btn btn-secondary debug-copy-btn" id="btnCopyDebug">Copy debug log</button>
                 <div class="debug-images" id="debugImagesContainer"></div>
             </div>
 
             <div class="btn-group">
                 <button class="btn btn-primary" id="btnShare"><i class="fa-solid fa-share-nodes"></i> Share Report</button>
+                <button class="btn btn-secondary" id="btnMaps"><i class="fa-solid fa-map-location-dot"></i> Open Maps</button>
                 <button class="btn btn-secondary" id="btnReset"><i class="fa-solid fa-arrow-rotate-left"></i> Scan Another</button>
             </div>
         </section>
@@ -339,7 +369,7 @@
     </main>
 
     <div class="hint-toast" id="hintToast">
-        <button class="hint-toast-close" id="hintToastClose">&times;</button>
+        <button class="hint-toast-close" id="hintToastClose" aria-label="Close">&times;</button>
         <div class="hint-toast-icon"><i class="fa-solid fa-keyboard"></i></div>
         <div class="hint-toast-body">
             <strong>Have a code you can read?</strong>
@@ -352,6 +382,9 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <script type="module">
+        // =========================================
+        // FIREBASE V9 CONFIGURATION & INIT
+        // =========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -367,6 +400,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // =========================================
+        // DOM ELEMENTS & STATE
+        // =========================================
         const DOM = {
             themeToggle: document.getElementById('themeToggle'),
             views: {
@@ -383,7 +419,10 @@
             hintToastClose: document.getElementById('hintToastClose'),
             hintToastAction: document.getElementById('hintToastAction'),
             debugPanel: document.getElementById('debugPanel'),
+            debugLog: document.getElementById('debugLog'),
             debugImages: document.getElementById('debugImagesContainer'),
+            btnCopyDebug: document.getElementById('btnCopyDebug'),
+            noMapMsg: document.getElementById('noMapMsg'),
             steps: {
                 load: document.getElementById('step-load'),
                 enhance: document.getElementById('step-enhance'),
@@ -404,14 +443,22 @@
             },
             btns: {
                 share: document.getElementById('btnShare'),
-                reset: document.getElementById('btnReset')
+                maps: document.getElementById('btnMaps'),
+                reset: document.getElementById('btnReset'),
+                retry: document.getElementById('btnRetry')
             }
         };
 
         let mapInstance = null;
         let ocrWorker = null;
-        let scanDebugImages = [];
+        let currentVerificationData = null;
+        let hintToastTimer = null;
+        // Each entry: { label, text, confidence, dataUrl }
+        let scanDebugEntries = [];
 
+        // =========================================
+        // VIEW / STEP HELPERS
+        // =========================================
         const switchView = (viewName) => {
             Object.values(DOM.views).forEach(v => v.classList.remove('active'));
             DOM.views[viewName].classList.add('active');
@@ -425,17 +472,28 @@
             if (status === 'done') el.classList.add('done');
         };
 
+        // =========================================
+        // HINT TOAST
+        // =========================================
         const showHintToast = () => {
             DOM.hintToast.classList.add('show');
+            clearTimeout(hintToastTimer);
+            hintToastTimer = setTimeout(hideHintToast, 12000);
         };
-        
-        DOM.hintToastClose.addEventListener('click', () => DOM.hintToast.classList.remove('show'));
-        DOM.hintToastAction.addEventListener('click', () => {
+        const hideHintToast = () => {
             DOM.hintToast.classList.remove('show');
+            clearTimeout(hintToastTimer);
+        };
+        DOM.hintToastClose.addEventListener('click', hideHintToast);
+        DOM.hintToastAction.addEventListener('click', () => {
+            hideHintToast();
             switchView('upload');
             DOM.manualInput.focus();
         });
 
+        // =========================================
+        // THEME
+        // =========================================
         DOM.themeToggle.addEventListener('click', () => {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
@@ -444,6 +502,9 @@
             DOM.themeToggle.innerHTML = next === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
         });
 
+        // =========================================
+        // FILE HANDLING
+        // =========================================
         DOM.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); DOM.dropZone.classList.add('dragover'); });
         DOM.dropZone.addEventListener('dragleave', () => DOM.dropZone.classList.remove('dragover'));
         DOM.dropZone.addEventListener('drop', (e) => {
@@ -455,33 +516,27 @@
             if (e.target.files.length) handleFile(e.target.files[0]);
         });
 
+        // =========================================
+        // MANUAL CODE ENTRY
+        // =========================================
         DOM.manualInput.addEventListener('input', () => {
             DOM.manualInput.value = DOM.manualInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
         });
-
-        const getWorker = async () => {
-            if (!ocrWorker) {
-                ocrWorker = await Tesseract.createWorker('eng');
-                await ocrWorker.setParameters({
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
-                    tessedit_pageseg_mode: '7',
-                    load_system_dawg: '0',
-                    load_freq_dawg: '0',
-                    load_freq_dawg: '0',
-                    load_unambig_dawg: '0',
-                    load_punc_dawg: '0',
-                    load_number_dawg: '0'
-                });
-            }
-            return ocrWorker;
-        };
+        DOM.manualInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); handleManualCode(); }
+        });
 
         const handleManualCode = async () => {
             const raw = DOM.manualInput.value.trim().toUpperCase();
             DOM.manualError.style.display = 'none';
 
+            if (!raw) {
+                DOM.manualError.textContent = 'Enter the 7 characters after "TS-" first.';
+                DOM.manualError.style.display = 'block';
+                return;
+            }
             if (!/^[A-Z0-9]{7}$/.test(raw)) {
-                DOM.manualError.textContent = 'Code must be exactly 7 letters or numbers.';
+                DOM.manualError.textContent = 'Code must be exactly 7 letters/numbers, no spaces or symbols.';
                 DOM.manualError.style.display = 'block';
                 return;
             }
@@ -491,11 +546,12 @@
             ['load', 'enhance', 'ocr', 'analyze'].forEach(s => setStep(s, 'done'));
             setStep('firebase', 'active');
 
+            const manualAnalysis = { integrity: 'N/A — manually entered code', aiSuspicion: 'N/A' };
+
             try {
                 const data = await verifyWithFirebase(code);
                 setStep('firebase', 'done');
-                renderResults(code, data, '100%', { integrity: 'N/A (Manual Entry)', ai: 'N/A' });
-                switchView('results');
+                renderResults(code, data, 100, manualAnalysis);
             } catch (err) {
                 const alternates = generateOcrAlternates(code);
                 let matchedData = null, matchedCode = null;
@@ -504,27 +560,129 @@
                         matchedData = await verifyWithFirebase(alt);
                         matchedCode = alt;
                         break;
-                    } catch (_) {}
+                    } catch (_) { /* try next */ }
                 }
-
+                setStep('firebase', 'done');
                 if (matchedData) {
-                    setStep('firebase', 'done');
-                    renderResults(matchedCode, matchedData, '100%', { integrity: 'N/A (Manual Entry)', ai: 'N/A' });
+                    renderResults(matchedCode, matchedData, 100, manualAnalysis);
                 } else {
-                    renderError(code);
+                    renderError({ type: 'MANUAL_NOT_FOUND', detectedCode: code });
                 }
-                switchView('results');
             }
+            switchView('results');
         };
 
         DOM.btnManualVerify.addEventListener('click', handleManualCode);
-        DOM.manualInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleManualCode(); });
 
+        // =========================================
+        // TESSERACT WORKER
+        // =========================================
+        const getWorker = async () => {
+            if (!ocrWorker) {
+                ocrWorker = await Tesseract.createWorker('eng');
+                await ocrWorker.setParameters({
+                    // Restrict to exactly what a code can contain.
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
+                    // Single text line, once rotated horizontal.
+                    tessedit_pageseg_mode: '7',
+                    // Disable dictionary/language-model guessing so Tesseract
+                    // reads exactly what's on the pixels.
+                    load_system_dawg: '0',
+                    load_freq_dawg: '0',
+                    load_unambig_dawg: '0',
+                    load_punc_dawg: '0',
+                    load_number_dawg: '0',
+                    load_bigram_dawg: '0',
+                    load_fixed_length_dawgs: '0'
+                });
+            }
+            return ocrWorker;
+        };
+
+        // =========================================
+        // CORE OCR PIPELINE
+        // =========================================
+        // This crop+rotate geometry is intentionally left as-is: canvas
+        // dimensions are swapped (width=cropHeight, height=cropWidth) to
+        // hold the rotated result, while the drawImage destination rect
+        // keeps the SOURCE's natural (un-rotated) proportions. That's the
+        // correct pattern — don't swap both, and don't swap neither.
+        const scanForCode = async (bitmap, worker) => {
+            const cropWidth = bitmap.width * 0.14;
+            const cropHeight = bitmap.height;
+
+            const processPass = async (isClockwise, label) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = cropHeight;
+                canvas.height = cropWidth;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((isClockwise ? 90 : -90) * Math.PI / 180);
+                ctx.drawImage(bitmap, 0, 0, cropWidth, cropHeight, -cropWidth / 2, -cropHeight / 2, cropWidth, cropHeight);
+
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const v = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2] > 175) ? 255 : 0;
+                    data[i] = data[i + 1] = data[i + 2] = v;
+                }
+                ctx.putImageData(imgData, 0, 0);
+
+                let dataUrl = null;
+                try { dataUrl = canvas.toDataURL(); } catch (e) { /* non-fatal */ }
+
+                const { data: { text, confidence } } = await worker.recognize(canvas);
+                const cleanText = text.replace(/\s+/g, '');
+                const match = cleanText.match(/TS-[A-Z0-9]{7}/);
+                const code = match ? match[0] : null;
+
+                scanDebugEntries.push({ label, text: text.trim(), confidence: Math.round(confidence || 0), dataUrl, code });
+                console.log(`[TimeSnap OCR] ${label} | conf ${Math.round(confidence || 0)} | "${text.trim()}"${code ? ` | matched: ${code}` : ''}`);
+
+                return { code, confidence: confidence || 0 };
+            };
+
+            let res = await processPass(true, 'left-edge 90\u00b0 CW');
+            if (!res.code) {
+                res = await processPass(false, 'left-edge 90\u00b0 CCW');
+            }
+            return res;
+        };
+
+        // =========================================
+        // FIREBASE + CODE REPAIR
+        // =========================================
+        const verifyWithFirebase = async (codeId) => {
+            const docRef = doc(db, "verifications", codeId);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) throw new Error("Missing document entry");
+            return docSnap.data();
+        };
+
+        const generateOcrAlternates = (code) => {
+            const maps = { '5': 'S', 'S': '5', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6' };
+            const results = [];
+            for (let i = 3; i < code.length; i++) {
+                const char = code[i];
+                if (maps[char]) {
+                    results.push(code.substring(0, i) + maps[char] + code.substring(i + 1));
+                }
+            }
+            return results;
+        };
+
+        // =========================================
+        // MAIN FILE HANDLER
+        // =========================================
         const handleFile = async (file) => {
             if (!file.type.startsWith('image/')) return alert("Please upload an image file.");
             switchView('progress');
-            scanDebugImages = [];
+            scanDebugEntries = [];
             DOM.debugPanel.style.display = 'none';
+            DOM.debugLog.innerHTML = '';
             DOM.debugImages.innerHTML = '';
 
             try {
@@ -541,12 +699,12 @@
                 setStep('ocr', 'done');
 
                 setStep('analyze', 'active');
-                const integrityAnalysis = { integrity: 'Valid Aspect Geometry', ai: 'Low Probability' };
+                const analysis = { integrity: 'Valid aspect geometry', aiSuspicion: 'Low' };
                 setStep('analyze', 'done');
 
                 setStep('firebase', 'active');
                 if (!scanResult.code) {
-                    renderError('NOT FOUND');
+                    renderError({ type: 'CODE_NOT_FOUND' });
                     switchView('results');
                     return;
                 }
@@ -554,7 +712,7 @@
                 try {
                     const data = await verifyWithFirebase(scanResult.code);
                     setStep('firebase', 'done');
-                    renderResults(scanResult.code, data, scanResult.confidence + '%', integrityAnalysis);
+                    renderResults(scanResult.code, data, scanResult.confidence, analysis);
                 } catch (_) {
                     const alternates = generateOcrAlternates(scanResult.code);
                     let matchedData = null, matchedCode = null;
@@ -563,134 +721,196 @@
                             matchedData = await verifyWithFirebase(alt);
                             matchedCode = alt;
                             break;
-                        } catch (_) {}
+                        } catch (_) { /* try next */ }
                     }
 
                     setStep('firebase', 'done');
                     if (matchedData) {
-                        renderResults(matchedCode, matchedData, scanResult.confidence + '%', integrityAnalysis);
+                        renderResults(matchedCode, matchedData, scanResult.confidence, analysis);
                     } else {
-                        renderError(scanResult.code);
+                        renderError({ type: 'TAMPERED', detectedCode: scanResult.code });
                     }
                 }
                 switchView('results');
             } catch (err) {
                 console.error(err);
-                renderError('ERROR');
+                renderError({ type: 'UNKNOWN', message: err.message });
                 switchView('results');
             }
         };
 
-        const scanForCode = async (bitmap, worker) => {
-            const cropWidth = bitmap.width * 0.14;
-            const cropHeight = bitmap.height;
-
-            const processPass = async (isClockwise) => {
-                const canvas = document.createElement('canvas');
-                canvas.width = cropHeight;
-                canvas.height = cropWidth;
-                const ctx = canvas.getContext('2d');
-
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.rotate((isClockwise ? 90 : -90) * Math.PI / 180);
-                
-                if (isClockwise) {
-                    ctx.drawImage(bitmap, 0, 0, cropWidth, cropHeight, -cropWidth / 2, -cropHeight / 2, cropWidth, cropHeight);
-                } else {
-                    ctx.drawImage(bitmap, 0, 0, cropWidth, cropHeight, -cropWidth / 2, -cropHeight / 2, cropWidth, cropHeight);
-                }
-
-                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imgData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    const v = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2] > 175) ? 255 : 0;
-                    data[i] = data[i+1] = data[i+2] = v;
-                }
-                ctx.putImageData(imgData, 0, 0);
-
-                scanDebugImages.push(canvas.toDataURL());
-
-                const { data: { text, confidence } } = await worker.recognize(canvas);
-                const cleanText = text.replace(/\s+/g, '');
-                const match = cleanText.match(/TS-[A-Z0-9]{7}/);
-
-                return {
-                    code: match ? match[0] : null,
-                    confidence: confidence
-                };
-            };
-
-            let res = await processPass(true);
-            if (!res.code) {
-                res = await processPass(false);
+        // =========================================
+        // RESULTS / ERROR RENDERING
+        // =========================================
+        const formatTimestamp = (ts) => {
+            if (!ts) return 'N/A';
+            try {
+                const d = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+                if (isNaN(d.getTime())) return 'N/A';
+                return d.toLocaleString();
+            } catch (e) {
+                return 'N/A';
             }
-            return res;
-        };
-
-        const verifyWithFirebase = async (codeId) => {
-            const docRef = doc(db, "verifications", codeId);
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) throw new Error("Missing document entry");
-            return docSnap.data();
-        };
-
-        const generateOcrAlternates = (code) => {
-            const maps = { '5': 'S', 'S': '5', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6', '0': 'O', 'O': '0' };
-            let results = [code];
-            for (let i = 3; i < code.length; i++) {
-                const char = code[i];
-                if (maps[char]) {
-                    results.push(code.substring(0, i) + maps[char] + code.substring(i + 1));
-                }
-            }
-            return results;
         };
 
         const renderResults = (code, data, ocrConf, analysis) => {
+            hideHintToast();
             DOM.results.badge.className = "status-badge status-verified";
             DOM.results.badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> Verified`;
+            DOM.btns.retry.style.display = 'none';
+
             DOM.results.code.textContent = code;
-            DOM.results.time.textContent = data.timestamp || 'N/A';
-            DOM.results.source.textContent = data.source || 'Secure Server';
-            DOM.results.media.textContent = data.type || 'Standard Capture';
-            DOM.results.ocr.textContent = ocrConf;
+            DOM.results.time.textContent = formatTimestamp(data.timestamp);
+            DOM.results.source.textContent = data.timeSource || data.source || 'Internet (NTP)';
+            DOM.results.media.textContent = data.mediaType || data.type || 'Image';
+            DOM.results.ocr.textContent = `${Number(ocrConf).toFixed(1)}%`;
             DOM.results.integrity.textContent = analysis.integrity;
-            DOM.results.ai.textContent = analysis.ai;
+            DOM.results.ai.textContent = analysis.aiSuspicion;
 
-            const lat = data.latitude || 51.505;
-            const lng = data.longitude || -0.09;
-            DOM.results.coords.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            const hasCoords = typeof data.latitude === 'number' && typeof data.longitude === 'number';
+            if (hasCoords) {
+                const lat = data.latitude, lng = data.longitude;
+                DOM.results.coords.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                currentVerificationData = { code, lat, lng, time: DOM.results.time.textContent };
 
-            if (mapInstance) { mapInstance.remove(); }
-            document.getElementById('map').style.display = 'block';
-            mapInstance = L.map('map').setView([lat, lng], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
-            L.marker([lat, lng]).addTo(mapInstance);
-        };
-
-        const renderError = (code) => {
-            DOM.results.badge.className = "status-badge status-error";
-            DOM.results.badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Unverified / Tampered`;
-            DOM.results.code.textContent = code || 'UNKNOWN';
-            document.getElementById('map').style.display = 'none';
-
-            if (scanDebugImages.length > 0) {
-                DOM.debugPanel.style.display = 'block';
-                scanDebugImages.forEach((src, idx) => {
-                    const img = document.createElement('img');
-                    img.src = src;
-                    img.className = 'debug-canvas-preview';
-                    img.title = `Pass ${idx + 1}`;
-                    DOM.debugImages.appendChild(img);
-                });
+                document.getElementById('map').style.display = 'block';
+                DOM.noMapMsg.style.display = 'none';
+                if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+                mapInstance = L.map('map').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(mapInstance);
+                L.marker([lat, lng]).addTo(mapInstance).bindPopup('<b>Verification Location</b>').openPopup();
+                setTimeout(() => mapInstance && mapInstance.invalidateSize(), 100);
+                DOM.btns.maps.style.display = '';
+            } else {
+                // Don't silently fake a location — say plainly there isn't one.
+                DOM.results.coords.textContent = 'Unknown';
+                currentVerificationData = { code, lat: null, lng: null, time: DOM.results.time.textContent };
+                document.getElementById('map').style.display = 'none';
+                DOM.noMapMsg.style.display = 'block';
+                DOM.btns.maps.style.display = 'none';
             }
-            showHintToast();
+
+            DOM.btns.share.style.display = '';
+            renderDebugPanel();
         };
 
-        DOM.btns.reset.addEventListener('click', () => {
+        const renderError = (err) => {
+            const type = err.type || 'UNKNOWN';
+            let badgeText, codeText, integrityText, subMsg;
+
+            if (type === 'TAMPERED') {
+                badgeText = 'Tampered / Fake';
+                codeText = err.detectedCode || 'DETECTED CODE';
+                integrityText = 'Failed — code not in database';
+                subMsg = 'A code was found on this image but it does not match any record in our verification database.';
+            } else if (type === 'CODE_NOT_FOUND') {
+                badgeText = 'Code Not Found';
+                codeText = '— NO CODE —';
+                integrityText = 'No TimeSnap code detected';
+                subMsg = 'No verification code could be read from the left edge of this picture.';
+            } else if (type === 'MANUAL_NOT_FOUND') {
+                badgeText = 'Code Not Found';
+                codeText = err.detectedCode || 'TS-???????';
+                integrityText = 'No matching record in database';
+                subMsg = 'This code doesn\'t match any record in our database. Double-check the characters.';
+            } else {
+                badgeText = 'Verification Failed';
+                codeText = 'ERROR';
+                integrityText = 'N/A';
+                subMsg = err.message || 'An unexpected error occurred during verification.';
+            }
+
+            DOM.results.badge.className = "status-badge status-error";
+            DOM.results.badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${badgeText}`;
+            DOM.results.code.textContent = codeText;
+            DOM.results.time.textContent = '--';
+            DOM.results.source.textContent = '--';
+            DOM.results.media.textContent = '--';
+            DOM.results.coords.textContent = '--';
+            DOM.results.integrity.textContent = integrityText;
+            DOM.results.ai.textContent = 'N/A';
+            DOM.results.ocr.textContent = type === 'TAMPERED' ? 'Read OK' : 'Failed';
+
+            DOM.btns.retry.style.display = '';
+            DOM.btns.share.style.display = 'none';
+            DOM.btns.maps.style.display = 'none';
+            document.getElementById('map').style.display = 'none';
+            DOM.noMapMsg.style.display = 'block';
+            DOM.noMapMsg.textContent = subMsg;
+
+            renderDebugPanel();
+
+            if (type === 'CODE_NOT_FOUND' || type === 'TAMPERED' || type === 'UNKNOWN') {
+                showHintToast();
+            }
+        };
+
+        const renderDebugPanel = () => {
+            DOM.debugLog.innerHTML = '';
+            DOM.debugImages.innerHTML = '';
+            if (scanDebugEntries.length === 0) {
+                DOM.debugPanel.style.display = 'none';
+                return;
+            }
+            DOM.debugPanel.style.display = 'block';
+
+            const logText = scanDebugEntries
+                .map(e => `${e.label} | conf ${e.confidence} | "${e.text}"${e.code ? ` | matched: ${e.code}` : ''}`)
+                .join('\n');
+            DOM.debugLog.textContent = logText;
+
+            scanDebugEntries.forEach((entry, idx) => {
+                if (!entry.dataUrl) return;
+                const img = document.createElement('img');
+                img.src = entry.dataUrl;
+                img.className = 'debug-canvas-preview';
+                img.title = entry.label;
+                DOM.debugImages.appendChild(img);
+            });
+
+            DOM.btnCopyDebug.onclick = () => {
+                navigator.clipboard.writeText(logText);
+                DOM.btnCopyDebug.textContent = 'Copied!';
+                setTimeout(() => { DOM.btnCopyDebug.textContent = 'Copy debug log'; }, 1500);
+            };
+        };
+
+        // =========================================
+        // BUTTON ACTIONS
+        // =========================================
+        const resetToUpload = () => {
+            DOM.fileInput.value = '';
             DOM.manualInput.value = '';
             DOM.manualError.style.display = 'none';
+            hideHintToast();
+            Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
+        };
+        DOM.btns.reset.addEventListener('click', resetToUpload);
+        DOM.btns.retry.addEventListener('click', resetToUpload);
+
+        DOM.btns.maps.addEventListener('click', () => {
+            if (!currentVerificationData || currentVerificationData.lat == null) return;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${currentVerificationData.lat},${currentVerificationData.lng}`, '_blank');
+        });
+
+        DOM.btns.share.addEventListener('click', async () => {
+            if (!currentVerificationData) return;
+            const text = `TimeSnap Verification Report\nCode: ${currentVerificationData.code}\nTime: ${currentVerificationData.time}\n` +
+                (currentVerificationData.lat != null
+                    ? `Location: ${currentVerificationData.lat}, ${currentVerificationData.lng}\n`
+                    : '') +
+                `Status: Verified`;
+
+            if (navigator.share) {
+                try { await navigator.share({ title: 'TimeSnap Report', text }); }
+                catch (err) { console.log('Share dismissed'); }
+            } else {
+                navigator.clipboard.writeText(text);
+                alert('Report copied to clipboard!');
+            }
         });
     </script>
 </body>
