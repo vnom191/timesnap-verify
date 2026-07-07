@@ -449,6 +449,7 @@
 
         let mapInstance = null;
         let currentVerificationData = null;
+        let ocrWorker = null;
         // Records every raw OCR attempt this scan makes — text, confidence,
         // which strategy produced it — so failures can be diagnosed from
         // real output instead of guessed at blindly. Reset per scan.
@@ -913,201 +914,50 @@
             ctx.putImageData(out, 0, 0);
         };
 
-        // Rotates the ENTIRE source image losslessly (90°/270° rotation is
-        // pure pixel remapping — no interpolation needed) at full native
-        // resolution, BEFORE any cropping or upscaling happens. This avoids
-        // the alternative of doing rotation + crop + extreme upscale (5-15x)
-        // all in one resampling pass, which can compound blur on tiny text.
-        // Doing the lossless rotation first, then cropping+upscaling from
-        // that clean full-resolution result, keeps the one genuinely lossy
-        // step (the upscale) isolated and gives OCR a cleaner source.
-        const rotateFullBitmap = (bitmap, degrees) => {
-            const w = bitmap.width, h = bitmap.height;
-            const c = document.createElement('canvas');
-            const cx = c.getContext('2d', { willReadFrequently: true });
-            if (degrees === 90 || degrees === 270) {
-                c.width = h; c.height = w;
-            } else {
-                c.width = w; c.height = h;
-            }
-            cx.save();
-            cx.translate(c.width / 2, c.height / 2);
-            cx.rotate(degrees * Math.PI / 180);
-            cx.drawImage(bitmap, -w / 2, -h / 2);
-            cx.restore();
-            return c;
-        };
-
-        // Extract a region of the image with rotation and processing.
-        // Narrow strips get aggressive upscaling because OCR needs
-        // at least ~200 pixels of character height to work reliably.
-        const extractRegion = (bitmap, sx, sy, sw, sh, rotate, mode) => {
-            // After rotating 90/270, the strip's SHORT dimension (sw)
-            // becomes the HEIGHT of the horizontal image sent to OCR.
-            // We need at least 200px tall for reliable OCR on tiny burned text.
-            const targetShortSide = 260;
-            const shortSide = Math.min(sw, sh);
-            const scale = Math.max(3, targetShortSide / shortSide);
-            const outW = Math.round(sw * scale);
-            const outH = Math.round(sh * scale);
-
-            const c = document.createElement('canvas');
-            const cx = c.getContext('2d', { willReadFrequently: true });
-            cx.imageSmoothingEnabled = true;
-            cx.imageSmoothingQuality = 'high';
-
-            if (rotate === 0) {
-                c.width = outW; c.height = outH;
-                cx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, outW, outH);
-            } else if (rotate === 90 || rotate === 270) {
-                c.width = outH; c.height = outW;
-                cx.save();
-                cx.translate(c.width / 2, c.height / 2);
-                cx.rotate(rotate * Math.PI / 180);
-                cx.drawImage(bitmap, sx, sy, sw, sh, -outW / 2, -outH / 2, outW, outH);
-                cx.restore();
-            } else {
-                c.width = outW; c.height = outH;
-                cx.save();
-                cx.translate(c.width / 2, c.height / 2);
-                cx.rotate(Math.PI);
-                cx.drawImage(bitmap, sx, sy, sw, sh, -outW / 2, -outH / 2, outW, outH);
-                cx.restore();
-            }
-
-            // Sharpen first — recovers crisp edges lost during aggressive
-            // upscaling. Helps every mode below, since they all depend on
-            // clean edges to threshold correctly.
-            sharpen(c);
-
-            if (mode === 'adaptive') {
-                adaptiveThreshold(c);
-            } else if (mode === 'contrast') {
-                contrastBoost(c, 1.8);
-            } else if (mode === 'contrast-thresh') {
-                contrastBoost(c, 2.0);
-                adaptiveThreshold(c);
-            } else if (mode === 'bright-170') {
-                brightTextIsolate(c, 170);
-                dilateDark(c, 1);
-            } else if (mode === 'bright-190') {
-                brightTextIsolate(c, 190);
-                dilateDark(c, 1);
-            } else if (mode === 'bright-210') {
-                brightTextIsolate(c, 210);
-                dilateDark(c, 1);
-            } else if (mode === 'hist-eq') {
-                histogramEqualize(c);
-                adaptiveThreshold(c);
-            } else if (mode === 'local-bright') {
-                localAdaptiveThreshold(c, 25, 8, true);
-                dilateDark(c, 1);
-            } else if (mode === 'local-dark') {
-                localAdaptiveThreshold(c, 25, 8, false);
-                dilateDark(c, 1);
-            }
-
-            return c;
-        };
-
-        // Build scan strategies — LEFT EDGE ONLY, code reads bottom-to-top
-        // Rotate 270° so bottom-to-top vertical text becomes left-to-right horizontal
-        const buildScanStrategies = (bitmap) => {
-            const W = bitmap.width, H = bitmap.height;
-            const strategies = [];
-
-            // Left edge widths to try (in order — narrowest is most accurate)
-            // Code sits at very left edge, ~8-12% of image width
-            const widths = [
-                { name: 'left 10%',  ratio: 0.10 },
-                { name: 'left 8%',   ratio: 0.08 },
-                { name: 'left 12%',  ratio: 0.12 },
-                { name: 'left 6%',   ratio: 0.06 },
-                { name: 'left 15%',  ratio: 0.15 }
-            ];
-
-            // Processing modes (best first). local-bright/local-dark use a
-            // TRUE local adaptive threshold — comparing each pixel to its own
-            // neighborhood average rather than one global cutoff — which is
-            // what actually solves near-invisible-contrast text (the classic
-            // "white on white" problem). hist-eq stretches the compressed
-            // brightness range before thresholding for the same reason. The
-            // bright-* modes are a simpler fixed-cutoff fallback, and
-            // adaptive/contrast are the original global-Otsu fallbacks.
-            const modes = [
-                'local-bright', 'hist-eq', 'bright-190',
-                'local-dark', 'adaptive', 'bright-170',
-                'contrast-thresh', 'bright-210', 'contrast'
-            ];
-
-            // Rotation 90 is primary (works for standard TimeSnap portrait output)
-            // 270 is fallback for images that came in rotated differently
-            const rotations = [90, 270];
-
-            for (const rot of rotations) {
-                for (const w of widths) {
-                    for (const mode of modes) {
-                        strategies.push({
-                            name: `${w.name} @ ${rot}° ${mode}`,
-                            sx: 0, sy: 0,
-                            sw: Math.max(60, W * w.ratio),
-                            sh: H,
-                            rotate: rot,
-                            mode: mode
-                        });
-                    }
-                }
-            }
-
-            return strategies;
-        };
-
-        // =========================================
-        // OCR PIPELINE (TESSERACT) — MULTI-STRATEGY SCANNER
-        // =========================================
-        let ocrWorker = null;
-
         const getWorker = async () => {
             if (!ocrWorker) {
                 ocrWorker = await Tesseract.createWorker('eng');
                 await ocrWorker.setParameters({
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- .',
-                    preserve_interword_spaces: '1'
+                    // Restrict to exactly what a code can contain — stops
+                    // Tesseract from "correcting" characters toward anything
+                    // outside this set.
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
+                    // Disable every dictionary/language-model layer so
+                    // Tesseract reads exactly what's on the pixels instead of
+                    // guessing toward real English words or common patterns.
+                    load_system_dawg: '0',
+                    load_freq_dawg: '0',
+                    load_punc_dawg: '0',
+                    load_number_dawg: '0',
+                    load_unambig_dawg: '0',
+                    load_bigram_dawg: '0',
+                    load_fixed_length_dawgs: '0',
+                    // Single text line — correct once the crop is rotated
+                    // horizontal.
+                    tessedit_pageseg_mode: '7',
                 });
             }
             return ocrWorker;
         };
 
-        // Try both PSM modes — PSM 11 (sparse text) often finds codes that
-        // PSM 7 (single line) misses on narrow vertical strips.
+        // Single-pass recognition — PSM 7 is fixed at worker init above,
+        // matching the spec: treat the rotated crop as one horizontal line.
         const runOCROnCanvas = async (canvas, label = '') => {
             const worker = await getWorker();
-            let best = { text: '', confidence: 0, code: null };
-            // PSM 7 (single line) first since our crop is a tight single strip;
-            // 11 (sparse text) and 6 (block) as fallbacks for looser crops.
-            for (const psm of ['7', '11', '6', '13']) {
-                try {
-                    await worker.setParameters({ tessedit_pageseg_mode: psm });
-                    const ret = await worker.recognize(canvas);
-                    const text = ret.data.text || '';
-                    const code = extractAndRepairCode(text);
+            try {
+                const ret = await worker.recognize(canvas);
+                const text = ret.data.text || '';
+                const code = extractAndRepairCode(text);
+                const confidence = Math.round(ret.data.confidence || 0);
 
-                    const entry = { label, psm, text: text.replace(/\n/g, ' \u21b5 ').trim(), confidence: Math.round(ret.data.confidence || 0), code };
-                    scanDebugLog.push(entry);
-                    console.log(`[TimeSnap OCR] ${label} | PSM ${psm} | conf ${entry.confidence} | "${entry.text}"${code ? ` | matched: ${code}` : ''}`);
+                const entry = { label, psm: '7', text: text.replace(/\n/g, ' \u21b5 ').trim(), confidence, code };
+                scanDebugLog.push(entry);
+                console.log(`[TimeSnap OCR] ${label} | conf ${confidence} | "${entry.text}"${code ? ` | matched: ${code}` : ''}`);
 
-                    // Immediate exit the moment any PSM yields a valid code —
-                    // this is both faster and more accurate than the old
-                    // "longest text wins" heuristic.
-                    if (code) {
-                        return { text, confidence: ret.data.confidence || 0, code };
-                    }
-                    if (text.length > best.text.length) {
-                        best = { text, confidence: ret.data.confidence || 0, code: null };
-                    }
-                } catch (e) { /* try next PSM */ }
+                return { text, confidence: ret.data.confidence || 0, code };
+            } catch (e) {
+                return { text: '', confidence: 0, code: null };
             }
-            return best;
         };
 
         // The burn format on the picture is: "TS-XXXXXXX • Verify at TIMESNAP.INFO"
@@ -1167,7 +1017,6 @@
             const swaps = { 'S': '5', '5': 'S', '8': 'B', 'B': '8', '2': 'Z', 'Z': '2', '6': 'G', 'G': '6' };
             const alternates = new Set();
             const chars = code.split('');
-            // Try swapping each single character
             for (let i = 3; i < chars.length; i++) {
                 if (swaps[chars[i]]) {
                     const alt = [...chars];
@@ -1175,7 +1024,6 @@
                     alternates.add(alt.join(''));
                 }
             }
-            // Try swapping pairs of characters (up to 2 swaps at once)
             const alts = Array.from(alternates);
             for (const a1 of alts) {
                 const c1 = a1.split('');
@@ -1187,186 +1035,87 @@
                     }
                 }
             }
-            // Return sorted by fewest swaps first (closer to original are more likely)
             return Array.from(alternates).slice(0, 30); // cap to prevent excess Firebase reads
         };
 
-        // Run OCR across many strategies until we find a valid code
+        // Isolate & rotate the left edge. The code is printed vertically
+        // along the left margin, so we crop a thin strip from the left side
+        // of the source image and rotate it 90 degrees CLOCKWISE — in
+        // canvas's default (y-down) coordinate system, a positive rotate()
+        // angle is clockwise, so this lays the text horizontal, reading
+        // left-to-right, exactly how Tesseract expects a single text line.
+        const isolateAndRotateLeftEdge = (bitmap, cropRatio, rotateClockwise = true) => {
+            const w = bitmap.width, h = bitmap.height;
+            const cropWidth = Math.max(60, w * cropRatio);
+
+            // Upscale so the short dimension (the crop width, which becomes
+            // the OCR'd line's height after rotation) reaches a legible size.
+            const targetHeight = 240;
+            const scale = Math.max(3, targetHeight / cropWidth);
+            const outLineLength = Math.round(h * scale);   // becomes canvas width after rotation
+            const outLineHeight = Math.round(cropWidth * scale); // becomes canvas height after rotation
+
+            const canvas = document.createElement('canvas');
+            canvas.width = outLineLength;
+            canvas.height = outLineHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate((rotateClockwise ? 90 : -90) * Math.PI / 180);
+            // Source rect: the left-edge strip (0,0,cropWidth,h). Destination
+            // is centered and pre-rotated by the translate+rotate above, so
+            // width/height are swapped here to land correctly post-rotation.
+            ctx.drawImage(
+                bitmap, 0, 0, cropWidth, h,
+                -outLineLength / 2, -outLineHeight / 2, outLineLength, outLineHeight
+            );
+            ctx.restore();
+
+            // Sharpen (recovers edges lost to the upscale) + local adaptive
+            // threshold (compares each pixel to its own neighborhood average
+            // rather than one global cutoff — the actual fix for text that's
+            // only faintly brighter/darker than a highly variable photo
+            // background, verified correct against a brute-force reference).
+            sharpen(canvas);
+            localAdaptiveThreshold(canvas, 25, 8, true);
+            dilateDark(canvas, 1);
+
+            return canvas;
+        };
+
+        // Scan for the code. Primary attempt: crop the left ~12% of the
+        // image, rotate 90° clockwise, single PSM-7 pass (worker is fixed to
+        // PSM 7 with all dictionaries disabled — see getWorker). If that
+        // comes back empty, try the counter-clockwise direction once, since
+        // TimeSnap's exact burn orientation can vary — this keeps the
+        // pipeline fast (at most 2 OCR calls) while still covering both
+        // plausible reading directions.
         const scanForCode = async (bitmap) => {
-            const stepEl = DOM.steps.ocr;
             scanDebugLog = [];
             console.log('[TimeSnap OCR] Starting scan on image', bitmap.width + 'x' + bitmap.height);
 
-            // Vote pool: code -> { geometryKeys: Set, totalConfidence, bestConfidence }
-            // Real bug found from live debug logs: two different *modes*
-            // (hist-eq, bright-190) landed on the same wrong text
-            // ("19Z9N94") because they were both processing the exact same
-            // crop region — that's not independent confirmation, it's the
-            // same wrong pixels fooling two filters the same way. Agreement
-            // now only counts when it comes from genuinely different crop
-            // GEOMETRY (different rotation/edge/ratio), tracked via
-            // geometryKey, not merely a different color-processing mode.
-            const candidates = new Map();
-            const record = (code, confidence, geometryKey) => {
-                const c = candidates.get(code) || { geometryKeys: new Set(), totalConfidence: 0, bestConfidence: 0, hits: 0 };
-                c.geometryKeys.add(geometryKey);
-                c.totalConfidence += confidence;
-                c.hits += 1;
-                c.bestConfidence = Math.max(c.bestConfidence, confidence);
-                candidates.set(code, c);
-                return c;
-            };
-            const pickBest = () => {
-                let bestCode = null, bestScore = -1, bestConf = 0;
-                for (const [code, c] of candidates.entries()) {
-                    const avgConf = c.totalConfidence / c.hits;
-                    // Geometric agreement matters far more than any single
-                    // confidence number, so it dominates the score.
-                    const score = c.geometryKeys.size * 100 + avgConf;
-                    if (score > bestScore) { bestScore = score; bestCode = code; bestConf = c.bestConfidence; }
-                }
-                if (!bestCode) return null;
-                const winner = candidates.get(bestCode);
-                // Trust gate: only accept if 2+ DIFFERENT crop regions agreed,
-                // OR a single read was very confident. A lone weak guess (or
-                // several modes agreeing on the same wrong crop) is treated
-                // as "not found" rather than reported as a wrong answer.
-                if (winner.geometryKeys.size >= 2 || winner.bestConfidence >= 45) {
-                    return { code: bestCode, confidence: bestConf };
-                }
-                return null;
-            };
+            const attempts = [
+                { rotateClockwise: true,  label: 'left-edge 90\u00b0 CW' },
+                { rotateClockwise: false, label: 'left-edge 90\u00b0 CCW' },
+            ];
 
-            // IMPORTANT FIX: the early-exit caps below used to trigger the
-            // moment ANY candidate existed — even a single wrong, low-
-            // confidence guess. Real debug logs showed this cutting the scan
-            // off after ~8 attempts, having only ever tried "rotate90° top" —
-            // it never reached "bottom", the other rotation, or later tiers.
-            // This checks for a genuinely trustworthy candidate (same bar as
-            // pickBest) before allowing an early exit.
-            const hasStrongCandidate = () => {
-                for (const c of candidates.values()) {
-                    if (c.geometryKeys.size >= 2 || c.bestConfidence >= 45) return true;
-                }
-                return false;
-            };
-
-            // TIER 0 — full-image rotate FIRST, then crop+upscale. Rotating
-            // the whole image at native resolution is lossless (90° is exact
-            // pixel remapping), so the crop+upscale that follows isn't
-            // compounding rotation blur into the same resampling pass. Try
-            // both plausible edges since we're not 100% certain which one
-            // the text lands on until we check.
-            for (const rot of [90, 270]) {
-                let rotatedFull;
+            for (const attempt of attempts) {
                 try {
-                    rotatedFull = rotateFullBitmap(bitmap, rot);
-                } catch (e) { continue; }
-
-                const RW = rotatedFull.width, RH = rotatedFull.height;
-                const ratios = [0.10, 0.08, 0.12, 0.06, 0.15];
-                const modes = ['local-bright', 'hist-eq', 'bright-190'];
-                let tier0Attempted = 0;
-
-                for (const edge of ['top', 'bottom']) {
-                    for (const ratio of ratios) {
-                        const bandH = Math.max(50, RH * ratio);
-                        const sy = edge === 'top' ? 0 : Math.max(0, RH - bandH);
-
-                        for (const mode of modes) {
-                            tier0Attempted++;
-                            const label = `T0 rotate${rot}° ${edge} ${Math.round(ratio*100)}% ${mode}`;
-                            const geometryKey = `T0-${rot}-${edge}-${ratio}`;
-                            if (stepEl) stepEl.setAttribute('data-progress', label);
-                            try {
-                                const canvas = extractRegion(rotatedFull, 0, sy, RW, bandH, 0, mode);
-                                const result = await runOCROnCanvas(canvas, label);
-                                const code = result.code || extractAndRepairCode(result.text);
-                                if (code) {
-                                    const entry = record(code, result.confidence || 0, geometryKey);
-                                    if (entry.geometryKeys.size >= 2) return { code, confidence: entry.bestConfidence };
-                                    if (entry.geometryKeys.size === 1 && (result.confidence || 0) >= 55) {
-                                        return { code, confidence: result.confidence };
-                                    }
-                                }
-                            } catch (e) { /* try next */ }
-                            await new Promise(r => setTimeout(r, 0));
-
-                            // Stay fast once we have a TRUSTWORTHY match — but
-                            // a single weak/wrong guess must not stop us from
-                            // trying the other edge or rotation.
-                            if (hasStrongCandidate() && tier0Attempted >= 8) break;
-                        }
-                        if (hasStrongCandidate() && tier0Attempted >= 8) break;
-                    }
-                    if (hasStrongCandidate() && tier0Attempted >= 8) break;
-                }
-            }
-
-            let best = pickBest();
-            if (best) return best;
-
-            // TIER 1 — original crop-then-rotate-then-scale approach (faster
-            // per-attempt, good as a second independent method for votes).
-            const strategies = buildScanStrategies(bitmap);
-            let attempted = 0;
-            for (let i = 0; i < strategies.length; i++) {
-                const s = strategies[i];
-                attempted++;
-
-                if (stepEl) {
-                    const pct = Math.round(((i + 1) / strategies.length) * 100);
-                    stepEl.setAttribute('data-progress', `${pct}% — ${s.name}`);
-                }
-
-                try {
-                    const canvas = extractRegion(bitmap, s.sx, s.sy, s.sw, s.sh, s.rotate, s.mode);
-                    const result = await runOCROnCanvas(canvas, `T1 ${s.name}`);
+                    const canvas = isolateAndRotateLeftEdge(bitmap, 0.12, attempt.rotateClockwise);
+                    const result = await runOCROnCanvas(canvas, attempt.label);
                     const code = result.code || extractAndRepairCode(result.text);
-                    const geometryKey = `T1-${s.sx}-${s.sy}-${Math.round(s.sw)}-${Math.round(s.sh)}-${s.rotate}`;
                     if (code) {
-                        const entry = record(code, result.confidence || 0, geometryKey);
-                        if (entry.geometryKeys.size >= 2) return { code, confidence: entry.bestConfidence };
-                        if (entry.geometryKeys.size === 1 && (result.confidence || 0) >= 55) {
-                            return { code, confidence: result.confidence };
-                        }
+                        return { code, confidence: result.confidence || 0 };
                     }
-                } catch (e) { /* try next */ }
-
-                if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
-
-                if (hasStrongCandidate() && attempted >= 14) break;
+                } catch (e) { /* try the other direction */ }
             }
 
-            best = pickBest();
-
-            // TIER 2 — last-resort desperate pass: wider crops with the
-            // strongest preprocessing, in case the code sits further from
-            // the edge than usual. Results feed into the same voting pool.
-            if (!best) {
-                const desperateWidths = [0.20, 0.28];
-                const desperateModes = ['local-bright', 'bright-190', 'adaptive'];
-                for (const rot of [90, 270]) {
-                    for (const w of desperateWidths) {
-                        for (const mode of desperateModes) {
-                            try {
-                                const canvas = extractRegion(
-                                    bitmap, 0, 0,
-                                    Math.max(80, bitmap.width * w), bitmap.height,
-                                    rot, mode
-                                );
-                                const result = await runOCROnCanvas(canvas, `T2 desperate ${rot}° ${Math.round(w*100)}% ${mode}`);
-                                const code = result.code || extractAndRepairCode(result.text);
-                                if (code) record(code, result.confidence || 0, `T2-${rot}-${w}`);
-                            } catch (e) { /* continue */ }
-                        }
-                    }
-                }
-                best = pickBest();
-            }
-
-            return best ? best : { code: null, confidence: 0 };
+            return { code: null, confidence: 0 };
         };
+
 
         // =========================================
         // HEURISTIC ANALYSIS (MOCK)
