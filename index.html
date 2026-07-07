@@ -469,8 +469,6 @@
             if (e.key === 'Enter') { e.preventDefault(); handleManualCode(); }
         });
 
-        DOM.btnManualVerify.addEventListener('click', handleManualCode);
-
         const handleManualCode = async () => {
             const raw = DOM.manualInput.value.trim().toUpperCase();
             DOM.manualError.style.display = 'none';
@@ -532,6 +530,8 @@
                 }
             }
         };
+
+        DOM.btnManualVerify.addEventListener('click', handleManualCode);
 
         const handleFile = async (file) => {
             if (!file.type.startsWith('image/')) return alert("Please upload a valid image file.");
