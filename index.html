@@ -1047,17 +1047,29 @@
         const isolateAndRotateLeftEdge = (bitmap, cropRatio, rotateClockwise = true) => {
             const w = bitmap.width, h = bitmap.height;
             const cropWidth = Math.max(60, w * cropRatio);
+            const cropHeight = h;
 
-            // Upscale so the short dimension (the crop width, which becomes
-            // the OCR'd line's height after rotation) reaches a legible size.
-            const targetHeight = 240;
-            const scale = Math.max(3, targetHeight / cropWidth);
-            const outLineLength = Math.round(h * scale);   // becomes canvas width after rotation
-            const outLineHeight = Math.round(cropWidth * scale); // becomes canvas height after rotation
+            // Upscale so the short dimension (crop width) reaches a legible
+            // size before OCR.
+            const targetShortSide = 240;
+            const scale = Math.max(3, targetShortSide / cropWidth);
+
+            // These match the SOURCE crop's own proportions (un-rotated) —
+            // destW tracks source width, destH tracks source height. Do not
+            // swap these; drawImage always draws in natural proportions
+            // regardless of any rotate() applied to the context.
+            const destW = Math.round(cropWidth * scale);
+            const destH = Math.round(cropHeight * scale);
 
             const canvas = document.createElement('canvas');
-            canvas.width = outLineLength;
-            canvas.height = outLineHeight;
+            // The CANVAS's own pixel dimensions are swapped relative to
+            // destW/destH — this is what actually accommodates the 90°
+            // rotation. Getting this backwards (or swapping both here AND
+            // in the draw rect) is exactly the bug that produced a
+            // blank/garbled crop in the previous version.
+            canvas.width = destH;
+            canvas.height = destW;
+
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
@@ -1065,12 +1077,9 @@
             ctx.save();
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.rotate((rotateClockwise ? 90 : -90) * Math.PI / 180);
-            // Source rect: the left-edge strip (0,0,cropWidth,h). Destination
-            // is centered and pre-rotated by the translate+rotate above, so
-            // width/height are swapped here to land correctly post-rotation.
             ctx.drawImage(
-                bitmap, 0, 0, cropWidth, h,
-                -outLineLength / 2, -outLineHeight / 2, outLineLength, outLineHeight
+                bitmap, 0, 0, cropWidth, cropHeight,
+                -destW / 2, -destH / 2, destW, destH
             );
             ctx.restore();
 
