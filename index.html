@@ -1259,7 +1259,67 @@
                 best = pickBest();
             }
 
+            // FINAL fallback: AI vision. Classical OCR (Tesseract + all the
+            // preprocessing above) genuinely struggles with this text style —
+            // tiny, rotated 90°, white text against wildly varying photo
+            // backgrounds. Only reached when nothing above found a confident
+            // answer, since it costs a small API call — most scans should
+            // still resolve for free via Tesseract above.
+            if (!best) {
+                best = await tryVisionFallback(bitmap);
+            }
+
             return best ? best : { code: null, confidence: 0 };
+        };
+
+        // =========================================
+        // AI VISION FALLBACK (Claude vision via Firebase Cloud Function)
+        // =========================================
+        // IMPORTANT: this calls YOUR OWN Cloud Function, not Anthropic's API
+        // directly — the API key must never live in frontend JS. See the
+        // functions/ folder for the server-side code that actually talks to
+        // Claude. Update this URL after you deploy that function.
+        const VISION_FALLBACK_URL = 'https://us-central1-timesnap-guardian.cloudfunctions.net/readTimeSnapCode';
+
+        const readCodeWithVisionAPI = async (canvas, mediaType = 'image/jpeg') => {
+            const dataUrl = canvas.toDataURL(mediaType, 0.85);
+            const base64 = dataUrl.split(',')[1];
+            const resp = await fetch(VISION_FALLBACK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: base64, mediaType })
+            });
+            if (!resp.ok) return null;
+            const data = await resp.json();
+            return data.code || null;
+        };
+
+        const tryVisionFallback = async (bitmap) => {
+            const stepEl = DOM.steps.ocr;
+            if (stepEl) stepEl.setAttribute('data-progress', 'Trying AI vision…');
+            // Crop cleanly — light processing only (just the sharpen that
+            // extractRegion always applies). Claude reads color/greyscale
+            // detail far better than a harshly binarized image, unlike
+            // Tesseract, so we deliberately skip thresholding here by
+            // passing an unrecognized mode string.
+            for (const rot of [90, 270]) {
+                try {
+                    const canvas = extractRegion(
+                        bitmap, 0, 0,
+                        Math.max(100, bitmap.width * 0.15), bitmap.height,
+                        rot, 'none'
+                    );
+                    const code = await readCodeWithVisionAPI(canvas);
+                    if (code && /^TS-[A-Z0-9]{7}$/.test(code)) {
+                        if (stepEl) stepEl.setAttribute('data-progress', 'AI vision found a match');
+                        return { code, confidence: 90 };
+                    }
+                } catch (e) {
+                    console.warn('Vision fallback failed:', e.message);
+                }
+            }
+            if (stepEl) stepEl.setAttribute('data-progress', 'AI vision — no match');
+            return null;
         };
 
         // =========================================
