@@ -1232,6 +1232,21 @@
                 return null;
             };
 
+            // IMPORTANT FIX: the early-exit caps below used to trigger the
+            // moment ANY candidate existed — even a single wrong, low-
+            // confidence guess. Real debug logs showed this cutting the scan
+            // off after ~8 attempts, having only ever tried "rotate90° top" —
+            // it never reached "bottom", the other rotation, or later tiers,
+            // because one garbage match on the first region stopped
+            // everything. This checks for a genuinely trustworthy candidate
+            // (same bar as pickBest) before allowing an early exit.
+            const hasStrongCandidate = () => {
+                for (const c of candidates.values()) {
+                    if (c.count >= 2 || c.bestConfidence >= 45) return true;
+                }
+                return false;
+            };
+
             // TIER 0 — full-image rotate FIRST, then crop+upscale. Rotating
             // the whole image at native resolution is lossless (90° is exact
             // pixel remapping), so the crop+upscale that follows isn't
@@ -1272,14 +1287,14 @@
                             } catch (e) { /* try next */ }
                             await new Promise(r => setTimeout(r, 0));
 
-                            // Stay fast: once we have at least one candidate from
-                            // this rotation, don't grind through every remaining
-                            // ratio/mode combo for it.
-                            if (candidates.size > 0 && tier0Attempted >= 8) break;
+                            // Stay fast once we have a TRUSTWORTHY match — but
+                            // a single weak/wrong guess must not stop us from
+                            // trying the other edge or rotation.
+                            if (hasStrongCandidate() && tier0Attempted >= 8) break;
                         }
-                        if (candidates.size > 0 && tier0Attempted >= 8) break;
+                        if (hasStrongCandidate() && tier0Attempted >= 8) break;
                     }
-                    if (candidates.size > 0 && tier0Attempted >= 8) break;
+                    if (hasStrongCandidate() && tier0Attempted >= 8) break;
                 }
             }
 
@@ -1314,7 +1329,7 @@
 
                 if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
 
-                if (candidates.size > 0 && attempted >= 14) break;
+                if (hasStrongCandidate() && attempted >= 14) break;
             }
 
             best = pickBest();
