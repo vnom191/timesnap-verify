@@ -909,6 +909,31 @@
             ctx.putImageData(out, 0, 0);
         };
 
+        // Rotates the ENTIRE source image losslessly (90°/270° rotation is
+        // pure pixel remapping — no interpolation needed) at full native
+        // resolution, BEFORE any cropping or upscaling happens. This avoids
+        // the alternative of doing rotation + crop + extreme upscale (5-15x)
+        // all in one resampling pass, which can compound blur on tiny text.
+        // Doing the lossless rotation first, then cropping+upscaling from
+        // that clean full-resolution result, keeps the one genuinely lossy
+        // step (the upscale) isolated and gives OCR a cleaner source.
+        const rotateFullBitmap = (bitmap, degrees) => {
+            const w = bitmap.width, h = bitmap.height;
+            const c = document.createElement('canvas');
+            const cx = c.getContext('2d', { willReadFrequently: true });
+            if (degrees === 90 || degrees === 270) {
+                c.width = h; c.height = w;
+            } else {
+                c.width = w; c.height = h;
+            }
+            cx.save();
+            cx.translate(c.width / 2, c.height / 2);
+            cx.rotate(degrees * Math.PI / 180);
+            cx.drawImage(bitmap, -w / 2, -h / 2);
+            cx.restore();
+            return c;
+        };
+
         // Extract a region of the image with rotation and processing.
         // Narrow strips get aggressive upscaling because OCR needs
         // at least ~200 pixels of character height to work reliably.
@@ -917,7 +942,8 @@
             // becomes the HEIGHT of the horizontal image sent to OCR.
             // We need at least 200px tall for reliable OCR on tiny burned text.
             const targetShortSide = 260;
-            const scale = Math.max(3, targetShortSide / sw);
+            const shortSide = Math.min(sw, sh);
+            const scale = Math.max(3, targetShortSide / shortSide);
             const outW = Math.round(sw * scale);
             const outH = Math.round(sh * scale);
 
@@ -1055,7 +1081,7 @@
             let best = { text: '', confidence: 0, code: null };
             // PSM 7 (single line) first since our crop is a tight single strip;
             // 11 (sparse text) and 6 (block) as fallbacks for looser crops.
-            for (const psm of ['7', '11', '6']) {
+            for (const psm of ['7', '11', '6', '13']) {
                 try {
                     await worker.setParameters({ tessedit_pageseg_mode: psm });
                     const ret = await worker.recognize(canvas);
@@ -1158,7 +1184,6 @@
 
         // Run OCR across many strategies until we find a valid code
         const scanForCode = async (bitmap) => {
-            const strategies = buildScanStrategies(bitmap);
             const stepEl = DOM.steps.ocr;
 
             // Vote pool: code -> { count, totalConfidence, bestConfidence }
@@ -1196,6 +1221,62 @@
                 return null;
             };
 
+            // TIER 0 — full-image rotate FIRST, then crop+upscale. Rotating
+            // the whole image at native resolution is lossless (90° is exact
+            // pixel remapping), so the crop+upscale that follows isn't
+            // compounding rotation blur into the same resampling pass. Try
+            // both plausible edges since we're not 100% certain which one
+            // the text lands on until we check.
+            for (const rot of [90, 270]) {
+                let rotatedFull;
+                try {
+                    rotatedFull = rotateFullBitmap(bitmap, rot);
+                } catch (e) { continue; }
+
+                const RW = rotatedFull.width, RH = rotatedFull.height;
+                const ratios = [0.10, 0.08, 0.12, 0.06, 0.15];
+                const modes = ['local-bright', 'hist-eq', 'bright-190'];
+                let tier0Attempted = 0;
+
+                for (const edge of ['top', 'bottom']) {
+                    for (const ratio of ratios) {
+                        const bandH = Math.max(50, RH * ratio);
+                        const sy = edge === 'top' ? 0 : Math.max(0, RH - bandH);
+
+                        for (const mode of modes) {
+                            tier0Attempted++;
+                            if (stepEl) stepEl.setAttribute('data-progress', `rotate-first ${rot}° ${edge} ${Math.round(ratio*100)}% ${mode}`);
+                            try {
+                                const canvas = extractRegion(rotatedFull, 0, sy, RW, bandH, 0, mode);
+                                const result = await runOCROnCanvas(canvas);
+                                const code = result.code || extractAndRepairCode(result.text);
+                                if (code) {
+                                    const entry = record(code, result.confidence || 0);
+                                    if (entry.count >= 2) return { code, confidence: entry.bestConfidence };
+                                    if (entry.count === 1 && (result.confidence || 0) >= 55) {
+                                        return { code, confidence: result.confidence };
+                                    }
+                                }
+                            } catch (e) { /* try next */ }
+                            await new Promise(r => setTimeout(r, 0));
+
+                            // Stay fast: once we have at least one candidate from
+                            // this rotation, don't grind through every remaining
+                            // ratio/mode combo for it.
+                            if (candidates.size > 0 && tier0Attempted >= 8) break;
+                        }
+                        if (candidates.size > 0 && tier0Attempted >= 8) break;
+                    }
+                    if (candidates.size > 0 && tier0Attempted >= 8) break;
+                }
+            }
+
+            let best = pickBest();
+            if (best) return best;
+
+            // TIER 1 — original crop-then-rotate-then-scale approach (faster
+            // per-attempt, good as a second independent method for votes).
+            const strategies = buildScanStrategies(bitmap);
             let attempted = 0;
             for (let i = 0; i < strategies.length; i++) {
                 const s = strategies[i];
@@ -1212,11 +1293,7 @@
                     const code = result.code || extractAndRepairCode(result.text);
                     if (code) {
                         const entry = record(code, result.confidence || 0);
-                        // Fast path: two independent strategies already agree — done.
-                        if (entry.count >= 2) {
-                            return { code, confidence: entry.bestConfidence };
-                        }
-                        // Fast path: a single very-high-confidence clean read — done.
+                        if (entry.count >= 2) return { code, confidence: entry.bestConfidence };
                         if (entry.count === 1 && (result.confidence || 0) >= 55) {
                             return { code, confidence: result.confidence };
                         }
@@ -1225,18 +1302,14 @@
 
                 if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
 
-                // Once we have at least one candidate, don't grind through
-                // every remaining combination — move on to picking a winner
-                // (or, if needed, the desperate pass below) so this stays fast.
                 if (candidates.size > 0 && attempted >= 14) break;
             }
 
-            let best = pickBest();
+            best = pickBest();
 
-            // Last-resort desperate pass: wider crops with the strongest
-            // preprocessing, in case the code sits further from the edge
-            // than usual (e.g. different device aspect ratio / crop).
-            // Results feed into the same voting pool.
+            // TIER 2 — last-resort desperate pass: wider crops with the
+            // strongest preprocessing, in case the code sits further from
+            // the edge than usual. Results feed into the same voting pool.
             if (!best) {
                 const desperateWidths = [0.20, 0.28];
                 const desperateModes = ['local-bright', 'bright-190', 'adaptive'];
@@ -1259,67 +1332,7 @@
                 best = pickBest();
             }
 
-            // FINAL fallback: AI vision. Classical OCR (Tesseract + all the
-            // preprocessing above) genuinely struggles with this text style —
-            // tiny, rotated 90°, white text against wildly varying photo
-            // backgrounds. Only reached when nothing above found a confident
-            // answer, since it costs a small API call — most scans should
-            // still resolve for free via Tesseract above.
-            if (!best) {
-                best = await tryVisionFallback(bitmap);
-            }
-
             return best ? best : { code: null, confidence: 0 };
-        };
-
-        // =========================================
-        // AI VISION FALLBACK (Claude vision via Firebase Cloud Function)
-        // =========================================
-        // IMPORTANT: this calls YOUR OWN Cloud Function, not Anthropic's API
-        // directly — the API key must never live in frontend JS. See the
-        // functions/ folder for the server-side code that actually talks to
-        // Claude. Update this URL after you deploy that function.
-        const VISION_FALLBACK_URL = 'https://us-central1-timesnap-guardian.cloudfunctions.net/readTimeSnapCode';
-
-        const readCodeWithVisionAPI = async (canvas, mediaType = 'image/jpeg') => {
-            const dataUrl = canvas.toDataURL(mediaType, 0.85);
-            const base64 = dataUrl.split(',')[1];
-            const resp = await fetch(VISION_FALLBACK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mediaType })
-            });
-            if (!resp.ok) return null;
-            const data = await resp.json();
-            return data.code || null;
-        };
-
-        const tryVisionFallback = async (bitmap) => {
-            const stepEl = DOM.steps.ocr;
-            if (stepEl) stepEl.setAttribute('data-progress', 'Trying AI vision…');
-            // Crop cleanly — light processing only (just the sharpen that
-            // extractRegion always applies). Claude reads color/greyscale
-            // detail far better than a harshly binarized image, unlike
-            // Tesseract, so we deliberately skip thresholding here by
-            // passing an unrecognized mode string.
-            for (const rot of [90, 270]) {
-                try {
-                    const canvas = extractRegion(
-                        bitmap, 0, 0,
-                        Math.max(100, bitmap.width * 0.15), bitmap.height,
-                        rot, 'none'
-                    );
-                    const code = await readCodeWithVisionAPI(canvas);
-                    if (code && /^TS-[A-Z0-9]{7}$/.test(code)) {
-                        if (stepEl) stepEl.setAttribute('data-progress', 'AI vision found a match');
-                        return { code, confidence: 90 };
-                    }
-                } catch (e) {
-                    console.warn('Vision fallback failed:', e.message);
-                }
-            }
-            if (stepEl) stepEl.setAttribute('data-progress', 'AI vision — no match');
-            return null;
         };
 
         // =========================================
