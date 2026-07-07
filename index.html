@@ -232,6 +232,34 @@
             .glass-card { padding: 24px; }
             .btn-group { flex-direction: column; }
         }
+
+        /* Hint Toast — corner popup nudging to manual entry on OCR failure */
+        .hint-toast {
+            position: fixed; bottom: 24px; right: 24px; max-width: 320px;
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg); padding: 16px 18px 16px 16px;
+            display: none; gap: 12px; align-items: flex-start; z-index: 1000;
+        }
+        .hint-toast.show { display: flex; animation: slideUp 0.35s ease; }
+        .hint-toast-close {
+            position: absolute; top: 6px; right: 8px; background: none; border: none;
+            color: var(--text-muted); font-size: 1.2rem; cursor: pointer; line-height: 1;
+            padding: 4px 6px; border-radius: 50%;
+        }
+        .hint-toast-close:hover { color: var(--text-main); background: var(--glass-border); }
+        .hint-toast-icon { color: var(--primary); font-size: 1.3rem; margin-top: 2px; flex-shrink: 0; }
+        .hint-toast-body strong { display: block; font-size: 0.92rem; margin-bottom: 4px; }
+        .hint-toast-body p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4; }
+        .hint-toast-action {
+            background: var(--primary); color: white; border: none; padding: 8px 14px;
+            border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        }
+        .hint-toast-action:hover { opacity: 0.9; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 600px) {
+            .hint-toast { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+        }
     </style>
 </head>
 <body>
@@ -343,6 +371,16 @@
 
     </main>
 
+    <div class="hint-toast" id="hintToast">
+        <button class="hint-toast-close" id="hintToastClose" aria-label="Close">&times;</button>
+        <div class="hint-toast-icon"><i class="fa-solid fa-keyboard"></i></div>
+        <div class="hint-toast-body">
+            <strong>Have a code you can read?</strong>
+            <p>If you can make out the "TS-XXXXXXX" code on the photo yourself, typing it in is faster and more reliable than scanning.</p>
+            <button class="hint-toast-action" id="hintToastAction">Enter code manually</button>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
@@ -380,6 +418,9 @@
             manualInput: document.getElementById('manualCodeInput'),
             btnManualVerify: document.getElementById('btnManualVerify'),
             manualError: document.getElementById('manualCodeError'),
+            hintToast: document.getElementById('hintToast'),
+            hintToastClose: document.getElementById('hintToastClose'),
+            hintToastAction: document.getElementById('hintToastAction'),
             steps: {
                 load: document.getElementById('step-load'),
                 enhance: document.getElementById('step-enhance'),
@@ -428,6 +469,26 @@
             if (status === 'active') el.classList.add('active');
             if (status === 'done') el.classList.add('done');
         };
+
+        // =========================================
+        // HINT TOAST (corner popup nudging to manual entry)
+        // =========================================
+        let hintToastTimer = null;
+        const showHintToast = () => {
+            DOM.hintToast.classList.add('show');
+            clearTimeout(hintToastTimer);
+            hintToastTimer = setTimeout(hideHintToast, 12000);
+        };
+        const hideHintToast = () => {
+            DOM.hintToast.classList.remove('show');
+            clearTimeout(hintToastTimer);
+        };
+        DOM.hintToastClose.addEventListener('click', hideHintToast);
+        DOM.hintToastAction.addEventListener('click', () => {
+            hideHintToast();
+            switchView('upload');
+            DOM.manualInput.focus();
+        });
 
         // =========================================
         // THEME MANAGEMENT
@@ -990,18 +1051,48 @@
         // Run OCR across many strategies until we find a valid code
         const scanForCode = async (bitmap) => {
             const strategies = buildScanStrategies(bitmap);
-            const stepEl = DOM.steps.ocr; // NOTE: was DOM.progress.steps.ocr — DOM.progress
-                                           // doesn't exist, so this threw on every single scan
-                                           // and silently killed OCR before it ever ran.
+            const stepEl = DOM.steps.ocr;
 
-            let found = null;
-            let bestConfidence = 0;
+            // Vote pool: code -> { count, totalConfidence, bestConfidence }
+            // Accepting the very first pattern-shaped match (the old approach)
+            // is how a single garbage read like "T4CTEEG" slipped through with
+            // a confident-looking "Read OK" badge. Now a code only wins if
+            // multiple independent strategies agree, or one read is very
+            // high-confidence on its own.
+            const candidates = new Map();
+            const record = (code, confidence) => {
+                const c = candidates.get(code) || { count: 0, totalConfidence: 0, bestConfidence: 0 };
+                c.count += 1;
+                c.totalConfidence += confidence;
+                c.bestConfidence = Math.max(c.bestConfidence, confidence);
+                candidates.set(code, c);
+                return c;
+            };
+            const pickBest = () => {
+                let bestCode = null, bestScore = -1, bestConf = 0;
+                for (const [code, c] of candidates.entries()) {
+                    const avgConf = c.totalConfidence / c.count;
+                    // Agreement across strategies matters far more than any
+                    // single confidence number, so it dominates the score.
+                    const score = c.count * 100 + avgConf;
+                    if (score > bestScore) { bestScore = score; bestCode = code; bestConf = c.bestConfidence; }
+                }
+                if (!bestCode) return null;
+                const winner = candidates.get(bestCode);
+                // Trust gate: only accept if 2+ strategies agreed, OR a single
+                // read was very confident. A lone weak guess is treated as
+                // "not found" rather than reported as a wrong answer.
+                if (winner.count >= 2 || winner.bestConfidence >= 45) {
+                    return { code: bestCode, confidence: bestConf };
+                }
+                return null;
+            };
 
+            let attempted = 0;
             for (let i = 0; i < strategies.length; i++) {
-                if (found) break;
                 const s = strategies[i];
+                attempted++;
 
-                // Update UI to show progress through variants
                 if (stepEl) {
                     const pct = Math.round(((i + 1) / strategies.length) * 100);
                     stepEl.setAttribute('data-progress', `${pct}% — ${s.name}`);
@@ -1012,23 +1103,35 @@
                     const result = await runOCROnCanvas(canvas);
                     const code = result.code || extractAndRepairCode(result.text);
                     if (code) {
-                        found = code;
-                        bestConfidence = result.confidence;
-                        break;
+                        const entry = record(code, result.confidence || 0);
+                        // Fast path: two independent strategies already agree — done.
+                        if (entry.count >= 2) {
+                            return { code, confidence: entry.bestConfidence };
+                        }
+                        // Fast path: a single very-high-confidence clean read — done.
+                        if (entry.count === 1 && (result.confidence || 0) >= 55) {
+                            return { code, confidence: result.confidence };
+                        }
                     }
                 } catch (e) { /* try next */ }
 
-                // Yield to browser every few strategies to keep UI responsive
-                if (i % 5 === 4) await new Promise(r => setTimeout(r, 0));
+                if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
+
+                // Once we have at least one candidate, don't grind through
+                // every remaining combination — move on to picking a winner
+                // (or, if needed, the desperate pass below) so this stays fast.
+                if (candidates.size > 0 && attempted >= 14) break;
             }
+
+            let best = pickBest();
 
             // Last-resort desperate pass: wider crops with the strongest
             // preprocessing, in case the code sits further from the edge
             // than usual (e.g. different device aspect ratio / crop).
-            if (!found) {
+            // Results feed into the same voting pool.
+            if (!best) {
                 const desperateWidths = [0.20, 0.28];
                 const desperateModes = ['bright-190', 'adaptive'];
-                outer:
                 for (const rot of [90, 270]) {
                     for (const w of desperateWidths) {
                         for (const mode of desperateModes) {
@@ -1040,18 +1143,15 @@
                                 );
                                 const result = await runOCROnCanvas(canvas);
                                 const code = result.code || extractAndRepairCode(result.text);
-                                if (code) {
-                                    found = code;
-                                    bestConfidence = result.confidence;
-                                    break outer;
-                                }
+                                if (code) record(code, result.confidence || 0);
                             } catch (e) { /* continue */ }
                         }
                     }
                 }
+                best = pickBest();
             }
 
-            return { code: found, confidence: bestConfidence };
+            return best ? best : { code: null, confidence: 0 };
         };
 
         // =========================================
@@ -1084,6 +1184,7 @@
         // UI RENDERING & MAP
         // =========================================
         const renderResults = (code, dbData, ocrConf, analysis, imageUrl) => {
+            hideHintToast();
             DOM.results.badge.className = 'status-badge status-verified';
             DOM.results.badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verified';
 
@@ -1165,6 +1266,14 @@
             DOM.results.ai.textContent = 'N/A';
             DOM.results.ocr.textContent = type === 'TAMPERED' ? 'Read OK' : 'Failed';
 
+            // Nudge toward manual entry — only for failures that came from the
+            // OCR/photo-scan path. If the user already typed a code manually
+            // (MANUAL_NOT_FOUND), they're already using that path, so don't
+            // show the same suggestion back at them.
+            if (type === 'CODE_NOT_FOUND' || type === 'TAMPERED' || type === 'UNKNOWN') {
+                showHintToast();
+            }
+
             // Show retry button at TOP under badge, hide bottom action buttons
             DOM.btns.retry.style.display = '';
             DOM.btns.share.style.display = 'none';
@@ -1222,6 +1331,7 @@
             DOM.fileInput.value = '';
             DOM.manualInput.value = '';
             DOM.manualError.style.display = 'none';
+            hideHintToast();
             // Reset steps UI
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
@@ -1232,6 +1342,7 @@
             DOM.fileInput.value = '';
             DOM.manualInput.value = '';
             DOM.manualError.style.display = 'none';
+            hideHintToast();
             Object.values(DOM.steps).forEach(el => el.className = 'progress-item');
             switchView('upload');
         });
