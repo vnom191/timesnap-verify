@@ -136,6 +136,13 @@
         }
         .progress-item.active { color: var(--text-main); font-weight: 500; }
         .progress-item.done { color: var(--success); }
+        .progress-item[data-progress]::after {
+            content: attr(data-progress);
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-family: monospace;
+        }
         .progress-spinner {
             width: 20px; height: 20px;
             border: 2px solid var(--glass-border);
@@ -218,32 +225,6 @@
                 <input type="file" id="fileInput" accept="image/jpeg, image/png, image/webp">
             </div>
 
-            <div class="or-divider" style="display:flex; align-items:center; gap:12px; margin:24px 0; color:var(--text-muted); font-size:0.85rem; letter-spacing:2px;">
-                <div style="flex:1; height:1px; background:var(--glass-border);"></div>
-                <span>OR ENTER CODE</span>
-                <div style="flex:1; height:1px; background:var(--glass-border);"></div>
-            </div>
-
-            <div class="code-entry" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px; padding:20px;">
-                <label style="display:block; font-size:0.8rem; letter-spacing:1.5px; color:var(--text-muted); margin-bottom:10px; text-transform:uppercase; font-weight:600;">Verification Code</label>
-                <div style="display:flex; align-items:stretch; gap:0; border:1.5px solid var(--glass-border); border-radius:10px; overflow:hidden; background:rgba(0,0,0,0.2);">
-                    <div style="padding:14px 16px; background:rgba(0,0,0,0.35); color:var(--primary); font-family:'Courier New',monospace; font-weight:800; font-size:1.1rem; letter-spacing:2px; display:flex; align-items:center; border-right:1px solid var(--glass-border);">TS-</div>
-                    <input
-                        type="text"
-                        id="manualCode"
-                        maxlength="7"
-                        placeholder="XXXXXXX"
-                        autocomplete="off"
-                        spellcheck="false"
-                        style="flex:1; padding:14px 16px; background:transparent; border:none; outline:none; color:var(--text); font-family:'Courier New',monospace; font-size:1.1rem; letter-spacing:4px; text-transform:uppercase; font-weight:700;"
-                    />
-                </div>
-                <p style="color:var(--text-muted); font-size:0.75rem; margin-top:8px;">Enter the 7-character code from the left edge of your TimeSnap image</p>
-                <button class="btn btn-primary" id="btnVerifyCode" style="width:100%; margin-top:14px;" disabled>
-                    <i class="fa-solid fa-shield-halved"></i> Verify Code
-                </button>
-            </div>
-
             <div style="margin-top: 24px; text-align: center;">
                 <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by TimeSnap Cloud AI & Firebase</p>
             </div>
@@ -319,7 +300,7 @@
         // FIREBASE V9 CONFIGURATION & INIT
         // =========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAP5_okpPwM-O1Onp8W0U9gJt4V1K8I4T8",
@@ -331,12 +312,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        // Force long-polling for regional databases (europe-west2) to avoid
-        // "Failed to fetch" errors when WebSocket / auto-detect fails.
-        const db = initializeFirestore(app, {
-            experimentalForceLongPolling: true,
-            ignoreUndefinedProperties: true
-        });
+        const db = getFirestore(app);
 
         // =========================================
         // DOM ELEMENTS & STATE
@@ -565,6 +541,88 @@
             ctx.putImageData(d, 0, 0);
         };
 
+        // Unsharp-style sharpen — recovers crisp glyph edges lost during the
+        // aggressive upscaling narrow strips need (they're often scaled 5-15x).
+        const sharpen = (canvas) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const w = canvas.width, h = canvas.height;
+            const src = ctx.getImageData(0, 0, w, h);
+            const s = src.data;
+            const lum = new Float32Array(w * h);
+            for (let i = 0, p = 0; i < s.length; i += 4, p++) {
+                lum[p] = 0.299 * s[i] + 0.587 * s[i + 1] + 0.114 * s[i + 2];
+            }
+            const out = ctx.createImageData(w, h);
+            const o = out.data;
+            const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    let sum = 0, k = 0;
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            const yy = Math.min(h - 1, Math.max(0, y + ky));
+                            const xx = Math.min(w - 1, Math.max(0, x + kx));
+                            sum += lum[yy * w + xx] * kernel[k++];
+                        }
+                    }
+                    const v = Math.max(0, Math.min(255, sum));
+                    const oi = (y * w + x) * 4;
+                    o[oi] = o[oi + 1] = o[oi + 2] = v;
+                    o[oi + 3] = 255;
+                }
+            }
+            ctx.putImageData(out, 0, 0);
+        };
+
+        // Morphological dilate on dark pixels — thickens thin anti-aliased
+        // strokes after thresholding so tiny burned-in glyphs read reliably.
+        const dilateDark = (canvas, iterations = 1) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const w = canvas.width, h = canvas.height;
+            for (let iter = 0; iter < iterations; iter++) {
+                const src = ctx.getImageData(0, 0, w, h);
+                const s = src.data;
+                const out = ctx.createImageData(w, h);
+                const o = out.data;
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        let minV = 255;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const yy = y + dy, xx = x + dx;
+                                if (yy < 0 || yy >= h || xx < 0 || xx >= w) continue;
+                                const idx = (yy * w + xx) * 4;
+                                if (s[idx] < minV) minV = s[idx];
+                            }
+                        }
+                        const oi = (y * w + x) * 4;
+                        o[oi] = o[oi + 1] = o[oi + 2] = minV;
+                        o[oi + 3] = 255;
+                    }
+                }
+                ctx.putImageData(out, 0, 0);
+            }
+        };
+
+        // Isolates bright/near-white burned-in text directly by luminance,
+        // ignoring the photographic background entirely. TimeSnap's burned
+        // stamp text is white or light green with a dark drop-shadow, so this
+        // targets the actual text color instead of balancing whole-strip
+        // contrast the way Otsu does — much more reliable when the strip
+        // crosses wood, wallpaper, screens, carpet, etc. behind the text.
+        const brightTextIsolate = (canvas, cutoff = 190) => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const px = d.data;
+            for (let i = 0; i < px.length; i += 4) {
+                const g = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+                // Output black text on white background (what Tesseract expects)
+                const val = g > cutoff ? 0 : 255;
+                px[i] = px[i + 1] = px[i + 2] = val;
+            }
+            ctx.putImageData(d, 0, 0);
+        };
+
         // Extract a region of the image with rotation and processing.
         // Narrow strips get aggressive upscaling because OCR needs
         // at least ~200 pixels of character height to work reliably.
@@ -572,7 +630,7 @@
             // After rotating 90/270, the strip's SHORT dimension (sw)
             // becomes the HEIGHT of the horizontal image sent to OCR.
             // We need at least 200px tall for reliable OCR on tiny burned text.
-            const targetShortSide = 200;
+            const targetShortSide = 260;
             const scale = Math.max(3, targetShortSide / sw);
             const outW = Math.round(sw * scale);
             const outH = Math.round(sh * scale);
@@ -601,57 +659,72 @@
                 cx.restore();
             }
 
-            if (mode === 'adaptive') adaptiveThreshold(c);
-            else if (mode === 'contrast') contrastBoost(c, 1.8);
-            else if (mode === 'contrast-thresh') { contrastBoost(c, 2.0); adaptiveThreshold(c); }
+            // Sharpen first — recovers crisp edges lost during aggressive
+            // upscaling. Helps every mode below, since they all depend on
+            // clean edges to threshold correctly.
+            sharpen(c);
+
+            if (mode === 'adaptive') {
+                adaptiveThreshold(c);
+            } else if (mode === 'contrast') {
+                contrastBoost(c, 1.8);
+            } else if (mode === 'contrast-thresh') {
+                contrastBoost(c, 2.0);
+                adaptiveThreshold(c);
+            } else if (mode === 'bright-170') {
+                brightTextIsolate(c, 170);
+                dilateDark(c, 1);
+            } else if (mode === 'bright-190') {
+                brightTextIsolate(c, 190);
+                dilateDark(c, 1);
+            } else if (mode === 'bright-210') {
+                brightTextIsolate(c, 210);
+                dilateDark(c, 1);
+            }
 
             return c;
         };
 
         // Build scan strategies — LEFT EDGE ONLY, code reads bottom-to-top
-        // Focus on vertical bands where the code actually lives (not the whole strip),
-        // so the surrounding picture content doesn't confuse OCR.
-        // Kept lean: ~30 variants max, best-first ordering so most photos resolve
-        // in the first 3-8 attempts.
+        // Rotate 270° so bottom-to-top vertical text becomes left-to-right horizontal
         const buildScanStrategies = (bitmap) => {
             const W = bitmap.width, H = bitmap.height;
             const strategies = [];
 
-            // Best-first list — proven to hit codes on real TimeSnap output.
-            // Ordered by success rate on test images.
-            const combos = [
-                // Sweet spot: middle 40% band, 8-10% width, high contrast, rotation 90
-                { w: 0.08, y1: 0.30, y2: 0.70, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.10, y1: 0.30, y2: 0.70, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.10, y1: 0.30, y2: 0.70, rot: 90, mode: 'adaptive' },
-                { w: 0.08, y1: 0.35, y2: 0.65, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.13, y1: 0.25, y2: 0.75, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.10, y1: 0.20, y2: 0.80, rot: 90, mode: 'adaptive' },
-                // Full strip fallback
-                { w: 0.10, y1: 0.00, y2: 1.00, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.15, y1: 0.00, y2: 1.00, rot: 90, mode: 'adaptive' },
-                { w: 0.08, y1: 0.00, y2: 1.00, rot: 90, mode: 'contrast' },
-                // Reverse rotation for pre-rotated uploads
-                { w: 0.10, y1: 0.30, y2: 0.70, rot: 270, mode: 'contrast-thresh' },
-                { w: 0.10, y1: 0.00, y2: 1.00, rot: 270, mode: 'adaptive' },
-                // Different vertical positions in case code is not centered
-                { w: 0.10, y1: 0.10, y2: 0.50, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.10, y1: 0.50, y2: 0.90, rot: 90, mode: 'contrast-thresh' },
-                // Wider strips (in case OCR was truncating letters)
-                { w: 0.18, y1: 0.30, y2: 0.70, rot: 90, mode: 'contrast-thresh' },
-                { w: 0.06, y1: 0.30, y2: 0.70, rot: 90, mode: 'contrast-thresh' }
+            // Left edge widths to try (in order — narrowest is most accurate)
+            // Code sits at very left edge, ~8-12% of image width
+            const widths = [
+                { name: 'left 10%',  ratio: 0.10 },
+                { name: 'left 8%',   ratio: 0.08 },
+                { name: 'left 12%',  ratio: 0.12 },
+                { name: 'left 6%',   ratio: 0.06 },
+                { name: 'left 15%',  ratio: 0.15 }
             ];
 
-            for (const c of combos) {
-                strategies.push({
-                    name: `w${Math.round(c.w*100)}% y${Math.round(c.y1*100)}-${Math.round(c.y2*100)}% r${c.rot}° ${c.mode}`,
-                    sx: 0,
-                    sy: H * c.y1,
-                    sw: Math.max(60, W * c.w),
-                    sh: H * (c.y2 - c.y1),
-                    rotate: c.rot,
-                    mode: c.mode
-                });
+            // Processing modes (best first). The bright-* modes isolate the
+            // white/light burned-in text directly by luminance rather than
+            // balancing contrast across the whole strip, which works far
+            // better when the background varies wildly (wood, wallpaper,
+            // screens, carpet, etc. all in the same narrow crop).
+            const modes = ['bright-190', 'adaptive', 'bright-170', 'contrast-thresh', 'bright-210', 'contrast'];
+
+            // Rotation 90 is primary (works for standard TimeSnap portrait output)
+            // 270 is fallback for images that came in rotated differently
+            const rotations = [90, 270];
+
+            for (const rot of rotations) {
+                for (const w of widths) {
+                    for (const mode of modes) {
+                        strategies.push({
+                            name: `${w.name} @ ${rot}° ${mode}`,
+                            sx: 0, sy: 0,
+                            sw: Math.max(60, W * w.ratio),
+                            sh: H,
+                            rotate: rot,
+                            mode: mode
+                        });
+                    }
+                }
             }
 
             return strategies;
@@ -673,22 +746,28 @@
             return ocrWorker;
         };
 
-        // Try multiple PSM modes — PSM 6 (block of text) works best on tight
-        // middle-band crops; PSM 11 (sparse text) fallback for wider strips;
-        // PSM 7 (single line) for very tight code-only regions.
+        // Try both PSM modes — PSM 11 (sparse text) often finds codes that
+        // PSM 7 (single line) misses on narrow vertical strips.
         const runOCROnCanvas = async (canvas) => {
             const worker = await getWorker();
-            let best = { text: '', confidence: 0 };
-            for (const psm of ['6', '11', '7']) {
+            let best = { text: '', confidence: 0, code: null };
+            // PSM 7 (single line) first since our crop is a tight single strip;
+            // 11 (sparse text) and 6 (block) as fallbacks for looser crops.
+            for (const psm of ['7', '11', '6']) {
                 try {
                     await worker.setParameters({ tessedit_pageseg_mode: psm });
                     const ret = await worker.recognize(canvas);
                     const text = ret.data.text || '';
-                    if (text.length > best.text.length) {
-                        best = { text, confidence: ret.data.confidence || 0 };
+                    const code = extractAndRepairCode(text);
+                    // Immediate exit the moment any PSM yields a valid code —
+                    // this is both faster and more accurate than the old
+                    // "longest text wins" heuristic.
+                    if (code) {
+                        return { text, confidence: ret.data.confidence || 0, code };
                     }
-                    // Early exit if we already have TS- + 7 chars looking valid
-                    if (/TS[\-\s]?[A-Z0-9]{7}/.test(text.toUpperCase())) break;
+                    if (text.length > best.text.length) {
+                        best = { text, confidence: ret.data.confidence || 0, code: null };
+                    }
                 } catch (e) { /* try next PSM */ }
             }
             return best;
@@ -778,8 +857,9 @@
         // Run OCR across many strategies until we find a valid code
         const scanForCode = async (bitmap) => {
             const strategies = buildScanStrategies(bitmap);
-            const stepEl = DOM.progress.steps.ocr;
-            const label = stepEl ? stepEl.querySelector('.progress-spinner')?.parentElement : null;
+            const stepEl = DOM.steps.ocr; // NOTE: was DOM.progress.steps.ocr — DOM.progress
+                                           // doesn't exist, so this threw on every single scan
+                                           // and silently killed OCR before it ever ran.
 
             let found = null;
             let bestConfidence = 0;
@@ -797,7 +877,7 @@
                 try {
                     const canvas = extractRegion(bitmap, s.sx, s.sy, s.sw, s.sh, s.rotate, s.mode);
                     const result = await runOCROnCanvas(canvas);
-                    const code = extractAndRepairCode(result.text);
+                    const code = result.code || extractAndRepairCode(result.text);
                     if (code) {
                         found = code;
                         bestConfidence = result.confidence;
@@ -807,6 +887,35 @@
 
                 // Yield to browser every few strategies to keep UI responsive
                 if (i % 5 === 4) await new Promise(r => setTimeout(r, 0));
+            }
+
+            // Last-resort desperate pass: wider crops with the strongest
+            // preprocessing, in case the code sits further from the edge
+            // than usual (e.g. different device aspect ratio / crop).
+            if (!found) {
+                const desperateWidths = [0.20, 0.28];
+                const desperateModes = ['bright-190', 'adaptive'];
+                outer:
+                for (const rot of [90, 270]) {
+                    for (const w of desperateWidths) {
+                        for (const mode of desperateModes) {
+                            try {
+                                const canvas = extractRegion(
+                                    bitmap, 0, 0,
+                                    Math.max(80, bitmap.width * w), bitmap.height,
+                                    rot, mode
+                                );
+                                const result = await runOCROnCanvas(canvas);
+                                const code = result.code || extractAndRepairCode(result.text);
+                                if (code) {
+                                    found = code;
+                                    bestConfidence = result.confidence;
+                                    break outer;
+                                }
+                            } catch (e) { /* continue */ }
+                        }
+                    }
+                }
             }
 
             return { code: found, confidence: bestConfidence };
@@ -998,52 +1107,6 @@
             } else {
                 navigator.clipboard.writeText(text);
                 alert('Report copied to clipboard!');
-            }
-        });
-
-        // ==== MANUAL CODE ENTRY ====
-        const manualInput = document.getElementById('manualCode');
-        const verifyCodeBtn = document.getElementById('btnVerifyCode');
-
-        // Sanitize input: uppercase, alphanumeric only, max 7 chars
-        manualInput.addEventListener('input', (e) => {
-            const clean = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
-            e.target.value = clean;
-            verifyCodeBtn.disabled = clean.length !== 7;
-        });
-
-        // Enter key = submit if valid
-        manualInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && manualInput.value.length === 7) {
-                verifyCodeBtn.click();
-            }
-        });
-
-        // Verify button click — look up code directly, no image, no OCR
-        verifyCodeBtn.addEventListener('click', async () => {
-            const code = 'TS-' + manualInput.value.toUpperCase();
-            if (!/^TS-[A-Z0-9]{7}$/.test(code)) return;
-
-            switchView('progress');
-            // Mark all steps except firebase as skipped
-            setStep('load', 'done');
-            setStep('enhance', 'done');
-            setStep('ocr', 'done');
-            setStep('analyze', 'done');
-            setStep('firebase', 'active');
-
-            try {
-                const data = await verifyWithFirebase(code);
-                setStep('firebase', 'done');
-                renderResults(code, data, 100, { integrity: 'Manual Entry', aiScore: 'N/A' }, null);
-                switchView('results');
-            } catch (err) {
-                renderError({
-                    type: 'TAMPERED',
-                    imageUrl: null,
-                    detectedCode: code
-                });
-                switchView('results');
             }
         });
 
