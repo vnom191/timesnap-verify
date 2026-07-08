@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en" data-theme="dark">
 <head>
@@ -7,7 +8,7 @@
   <meta name="description" content="TimeSnap photo verification" />
   <title>TimeSnap Verify — Evidence you can trust</title>
 
-  <!-- Libraries: Leaflet map + browser OCR. Uses native TextDetector when available, then Tesseract fallback. -->
+  <!-- Libraries: Leaflet map + machine-code reader (Data Matrix/QR) + browser OCR fallback. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -312,7 +313,7 @@
     .evidence-copy { margin: 11px 0 15px; color: var(--muted); font-size: 12px; line-height: 1.55; }
     .ocr-attempts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
     .ocr-attempt { overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: rgba(1,12,14,.22); }
-    .ocr-attempt img { display: block; width: 100%; height: 76px; object-fit: cover; object-position: center; background: #081518; }
+    .ocr-attempt img { display: block; width: 100%; height: 96px; object-fit: contain; object-position: left center; background: #081518; }
     .ocr-attempt div { padding: 9px; color: var(--muted); font: 10px var(--mono); line-height: 1.4; }
     .ocr-attempt strong { color: var(--soft); font-weight: 500; }
 
@@ -520,7 +521,7 @@
         </div>
 
         <div class="trust-row" aria-label="Verification workflow">
-          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/></svg></span><strong>Left-edge OCR</strong><span>Vertical overlay reader</span></div>
+          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/></svg></span><strong>Data Matrix first</strong><span>Left-edge machine reader</span></div>
           <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/></svg></span><strong>Firebase registry</strong><span>Direct document lookup</span></div>
           <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"/><path d="m8.5 12 2.1 2.1L15.9 9"/></svg></span><strong>Clear results</strong><span>Maps, report and sharing</span></div>
         </div>
@@ -534,7 +535,7 @@
               <img id="scanPreview" alt="Selected TimeSnap photo preview" />
               <div class="preview-caption"><span id="scanFilename">Selected image</span><span id="scanDimensions">loading…</span></div>
             </div>
-            <div class="image-scan-meter" aria-hidden="true"><i></i><span>OCR reader active</span><span class="image-scan-meter-track"></span></div>
+            <div class="image-scan-meter" aria-hidden="true"><i></i><span>Data Matrix / OCR reader active</span><span class="image-scan-meter-track"></span></div>
           </section>
           <section class="panel scan-panel">
             <div class="scan-header">
@@ -554,12 +555,12 @@
             <div class="steps">
               <div class="scan-step" id="stepLoad"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/></svg></span><div class="step-content"><strong>Load the selected image</strong><span>Creates a private local preview for the scan animation.</span></div></div>
               <div class="scan-step" id="stepCrop"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg></span><div class="step-content"><strong>Isolate the left vertical strip</strong><span>Targets the outer-left edge and enhances the TimeSnap overlay.</span></div></div>
-              <div class="scan-step" id="stepOcr"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><div class="step-content"><strong>Read TS verification code</strong><span>Uses a mobile-safe native/TextDetector scan, then a small Tesseract fallback.</span></div></div>
+              <div class="scan-step" id="stepOcr"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><div class="step-content"><strong>Read TS verification code</strong><span>Scans Data Matrix on the left edge first, then OCR fallback.</span></div></div>
               <div class="scan-step" id="stepRegistry"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v7c0 1.65 3.13 3 7 3s7-1.35 7-3V5"/><path d="M5 12v7c0 1.65 3.13 3 7 3s7-1.35 7-3v-7"/></svg></span><div class="step-content"><strong>Check TimeSnap registry</strong><span>Requests the matching Firebase record.</span></div></div>
               <div class="scan-step" id="stepScreen"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"/><path d="m8.7 12.1 2.1 2.1 4.6-4.8"/></svg></span><div class="step-content"><strong>Build evidence report</strong><span>Scores scan quality and available file checks.</span></div></div>
             </div>
 
-            <div class="scan-tip"><strong>Tip:</strong> We check the file's embedded metadata first — fast and reliable, no OCR needed. OCR only runs as a fallback if the file's metadata was stripped (common after WhatsApp/Instagram re-sharing), and if that fails too, a manual code popup opens.</div>
+            <div class="scan-tip"><strong>Tip:</strong> Data Matrix is now the main reader. The scanner checks metadata first, then the left-edge Data Matrix/QR code, then OCR only as a backup.</div>
           </section>
         </div>
       </section>
@@ -690,6 +691,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 
   <script type="module">
     /*
@@ -967,68 +969,165 @@
       catch (_) { return ''; }
     }
 
-    // Decodes a QR code drawn into the watermark. Far more reliable than
-    // text OCR: QR has built-in error correction and is read as black/white
-    // modules rather than font shapes, so blur/compression/low-res barely
-    // affect it. Requires the Flutter app to draw a QR alongside the
-    // visible watermark text (same TS-XXXXXXX payload).
-    function extractCodeFromQr(image) {
-      if (!window.jsQR) return null;
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const result = jsQR(imageData.data, imageData.width, imageData.height);
-        if (!result || !result.data) return null;
-        const match = result.data.match(/TS-[A-Z0-9]{5,9}/i);
-        return match ? match[0].toUpperCase() : null;
-      } catch (error) {
-        console.warn('QR read skipped:', error);
-        return null;
+    function extractTimeSnapCodeFromPayload(payload) {
+      const text = String(payload || '').toUpperCase();
+      const direct = text.match(/TS\s*[-:]?\s*([A-Z0-9]{7})/i);
+      if (direct) return `TS-${direct[1].toUpperCase()}`;
+      const jsonLike = text.match(/["']?(?:CODE|VERIFICATIONCODE|TIMESNAP)["']?\s*[:=]\s*["']?(TS[-:]?[A-Z0-9]{7}|[A-Z0-9]{7})/i);
+      if (jsonLike) {
+        const value = jsonLike[1].replace(/[^A-Z0-9]/gi, '').replace(/^TS/i, '').slice(0, 7).toUpperCase();
+        if (value.length === 7) return `TS-${value}`;
       }
+      const bare = text.replace(/[^A-Z0-9]/g, '').match(/(?:TS)?([A-Z0-9]{7})/);
+      return bare ? `TS-${bare[1].toUpperCase()}` : null;
+    }
+
+    function makeDecodeCanvas(image, crop, style = 'raw', maxSide = 1500) {
+      const sx = Math.max(0, Math.round(crop.x * image.naturalWidth));
+      const sy = Math.max(0, Math.round(crop.y * image.naturalHeight));
+      const sw = Math.max(1, Math.round(crop.w * image.naturalWidth));
+      const sh = Math.max(1, Math.round(crop.h * image.naturalHeight));
+      const scale = Math.min(1, maxSide / Math.max(sw, sh));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(64, Math.round(sw * scale));
+      canvas.height = Math.max(64, Math.round(sh * scale));
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (style === 'contrast') ctx.filter = 'contrast(1.8) brightness(1.08) saturate(0)';
+      if (style === 'bright') ctx.filter = 'contrast(1.35) brightness(1.35) saturate(0)';
+      if (style === 'sharp') ctx.filter = 'contrast(2.1) brightness(1.05) saturate(0)';
+      ctx.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      ctx.filter = 'none';
+      if (style === 'threshold' || style === 'invert') {
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = img.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const l = data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114;
+          let v = l > 140 ? 255 : 0;
+          if (style === 'invert') v = 255 - v;
+          data[i] = data[i + 1] = data[i + 2] = v;
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+      return canvas;
+    }
+
+    function buildMachineCodeCanvases(image) {
+      const crops = [
+        { label: 'Full image', x: 0, y: 0, w: 1, h: 1 },
+        { label: 'Whole left edge', x: 0, y: 0, w: .22, h: 1 },
+        { label: 'Tight left edge', x: 0, y: 0, w: .14, h: 1 },
+        { label: 'Left code column', x: 0, y: .18, w: .18, h: .66 },
+        { label: 'Left lower area', x: 0, y: .45, w: .24, h: .55 },
+        { label: 'Left upper area', x: 0, y: 0, w: .24, h: .55 }
+      ];
+      const styles = ['raw', 'contrast', 'bright', 'threshold'];
+      const canvases = [];
+      for (const crop of crops) {
+        for (const style of styles) {
+          canvases.push({ label: `Data Matrix ${crop.label} · ${style}`, canvas: makeDecodeCanvas(image, crop, style) });
+        }
+      }
+      return canvases;
+    }
+
+    async function extractCodeFromMachineCode(image) {
+      const attempts = [];
+      const canvases = buildMachineCodeCanvases(image);
+
+      // Data Matrix / QR via ZXing. This is the important reader for your new left-edge mark.
+      if (window.ZXing) {
+        try {
+          const formats = [ZXing.BarcodeFormat.DATA_MATRIX, ZXing.BarcodeFormat.QR_CODE];
+          const hints = new Map();
+          hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+          hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+          const reader = new ZXing.MultiFormatReader();
+          reader.setHints(hints);
+          for (const item of canvases) {
+            try {
+              const source = new ZXing.HTMLCanvasElementLuminanceSource(item.canvas);
+              const bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(source));
+              const result = reader.decode(bitmap);
+              const text = result?.getText ? result.getText() : String(result?.text || '');
+              const code = extractTimeSnapCodeFromPayload(text);
+              attempts.push({ label: item.label, canvas: item.canvas, raw: text || 'Decoded machine code', confidence: code ? 100 : 80, code });
+              if (code) return { code, method: 'Data Matrix / QR scan', attempts };
+            } catch (_) {
+              attempts.push({ label: item.label, canvas: item.canvas, raw: 'No Data Matrix / QR found', confidence: 0, code: null });
+            } finally {
+              if (reader.reset) reader.reset();
+            }
+            await idlePause();
+          }
+        } catch (error) {
+          console.warn('ZXing Data Matrix read skipped:', error);
+        }
+      }
+
+      // QR fallback via jsQR, kept for compatibility if ZXing CDN is blocked.
+      if (window.jsQR) {
+        try {
+          for (const item of canvases.slice(0, 8)) {
+            const ctx = item.canvas.getContext('2d', { willReadFrequently: true });
+            const imageData = ctx.getImageData(0, 0, item.canvas.width, item.canvas.height);
+            const result = jsQR(imageData.data, imageData.width, imageData.height);
+            const code = result?.data ? extractTimeSnapCodeFromPayload(result.data) : null;
+            attempts.push({ label: `${item.label} · jsQR`, canvas: item.canvas, raw: result?.data || 'No QR found', confidence: code ? 100 : 0, code });
+            if (code) return { code, method: 'QR scan', attempts };
+            await idlePause();
+          }
+        } catch (error) {
+          console.warn('QR read skipped:', error);
+        }
+      }
+
+      return { code: null, method: 'Data Matrix / QR scan', attempts };
     }
 
     async function runImageScan(file) {
       setStep('load', 'active', 'Loading the selected image into memory.');
       setProgress(10, 'Loading image', 'Preparing a private local image preview.');
-      const [image, fileHash] = await Promise.all([loadImage(file), sha256File(file)]);
+      const [image, fileHash] = await Promise.all([loadOrientedImage(file), sha256File(file)]);
       dom.scanDimensions.textContent = `${image.naturalWidth} × ${image.naturalHeight} · ${formatBytes(file.size)}`;
       setStep('load', 'done', 'Image loaded locally.');
 
       setStep('crop', 'active', 'Checking embedded verification metadata.');
       setProgress(18, 'Reading metadata', 'Checking the file for an embedded TimeSnap code (no OCR needed).');
       const exifCode = await extractCodeFromExif(file);
-      const qrCode = exifCode ? null : extractCodeFromQr(image);
-      const directCode = exifCode || qrCode;
+      let machine = { code: null, method: 'Data Matrix / QR scan', attempts: [] };
+      if (!exifCode) {
+        setProgress(24, 'Scanning Data Matrix', 'Checking the whole left edge and full image for the TimeSnap machine code.');
+        machine = await extractCodeFromMachineCode(image);
+      }
+      const directCode = exifCode || machine.code;
       if (directCode) {
-        const method = exifCode ? 'EXIF metadata read' : 'QR code scan';
-        setStep('crop', 'done', exifCode ? 'Verification code found in file metadata.' : 'QR code detected in watermark.');
+        const method = exifCode ? 'EXIF metadata read' : machine.method;
+        setStep('crop', 'done', exifCode ? 'Verification code found in file metadata.' : 'Data Matrix / QR code detected on the image.');
         setStep('ocr', 'done', `Read ${directCode} via ${method} — no text OCR required.`);
         setProgress(76, 'Checking registry', `Looking up ${directCode} in the TimeSnap registry.`);
         setStep('registry', 'active', `Checking ${directCode} against the Firebase registry.`);
+        state.ocrAttempts = machine.attempts || [];
         await runLookup({
           code: directCode,
           method,
           ocrConfidence: 100,
           file,
           fileHash,
-          ocrAttempts: [],
+          ocrAttempts: machine.attempts || [],
           skipView: true
         });
         return;
       }
-      setStep('crop', 'active', 'No metadata or QR found — falling back to text OCR.');
-      setProgress(25, 'Preparing edge OCR crops', 'Reading the middle code zone on the outer-left TimeSnap strip.');
+      state.ocrAttempts = machine.attempts || [];
+      setStep('crop', 'active', 'No Data Matrix / QR found — falling back to text OCR.');
+      setProgress(30, 'Preparing edge OCR crops', 'Reading the whole left vertical TimeSnap strip first.');
       const passes = createOcrPasses(image);
-      state.ocrAttempts = passes.map(pass => ({ label: pass.label, canvas: pass.canvas, raw: '', confidence: 0, code: null }));
+      state.ocrAttempts = [...state.ocrAttempts, ...passes.map(pass => ({ label: pass.label, canvas: pass.canvas, raw: '', confidence: 0, code: null }))];
       setStep('crop', 'done', `${passes.length} locally enhanced OCR strips prepared.`);
 
       setStep('ocr', 'active', 'Starting browser OCR engine.');
-      setProgress(42, 'Reading the code', 'The scanner uses a small number of mobile-safe passes to avoid browser crashes.');
-      const scan = await readTimeSnapCode(passes);
+      setProgress(42, 'Reading the code', 'The scanner reads the full left vertical strip first, then tries smaller fallback segments only if needed.');
+      const scan = await readTimeSnapCode(passes, image);
       state.ocrAttempts = scan.attempts;
       if (!scan.code) {
         setStep('ocr', 'fail', 'No valid TS-XXXXXXX code could be read.');
@@ -1152,6 +1251,40 @@
     }
 
     // Image decoding kept independent of createImageBitmap for better Safari/iPhone compatibility.
+    // Real camera photos often store pixel data in the sensor's native
+    // orientation and rely on an EXIF Orientation tag (1-8) for correct
+    // display. The tricky part: modern Chrome (81+), Firefox (77+), and
+    // recent Safari already auto-rotate this for you when drawing to
+    // canvas — so blindly re-applying our own rotation on top would
+    // double-rotate and land exactly as wrong as never correcting at all.
+    // exifr ships its own per-browser detector for this exact problem
+    // (exifr.rotation), so we use that instead of guessing ourselves.
+    async function loadOrientedImage(file) {
+      const image = await loadImage(file);
+      let rotation = null;
+      try {
+        if (window.exifr && exifr.rotation) rotation = await exifr.rotation(file);
+      } catch (error) {
+        console.warn('EXIF rotation check skipped:', error);
+      }
+      // No tag, or this browser already auto-orients for canvas: the
+      // plain <img> is already correct, nothing more to do.
+      if (!rotation || !rotation.canvas) return image;
+
+      const bw = image.naturalWidth, bh = image.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = rotation.dimensionSwapped ? bh : bw;
+      canvas.height = rotation.dimensionSwapped ? bw : bh;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(rotation.rad);
+      ctx.scale(rotation.scaleX, rotation.scaleY);
+      ctx.drawImage(image, -bw / 2, -bh / 2);
+      canvas.naturalWidth = canvas.width;
+      canvas.naturalHeight = canvas.height;
+      return canvas;
+    }
+
     function loadImage(file) {
       return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -1164,50 +1297,164 @@
 
     function createOcrPasses(image) {
       /*
-       * Mobile-safe TimeSnap OCR pipeline
+       * Stronger TimeSnap left-edge OCR pipeline
        * ------------------------------------------------------------------
-       * Previous version cropped narrow bands at fixed height fractions
-       * (e.g. y=.235–.30), assuming the code always sits near the top
-       * quarter of the frame. That assumption broke on photos where the
-       * watermark lands lower (different aspect ratios / longer address
-       * lines push it down) — the OCR was reading blank wall, not
-       * misreading the code. This version reads the FULL left edge
-       * (y: 0 to 1) so the code is always inside the crop no matter where
-       * it sits vertically, and only varies width/contrast/rotation.
+       * The old scanner used fixed windows only. On real TimeSnap photos some
+       * windows were almost blank because the visible code can sit higher or
+       * lower depending on aspect ratio, address length and crop. This version
+       * first searches the actual left-edge strip for bright vertical overlay
+       * pixels, then builds OCR crops around those detected bands. Fixed
+       * fallback windows are still added afterwards.
        */
       const passes = [];
       const seen = new Set();
-      const add = (label, width, rotation, style, y, h, psm = 7, x = 0, whitelist = `TS-${OCR_SAFE_ALPHABET}`) => {
-        const key = [width, rotation, style, y, h, psm, x].join('|');
-        if (seen.has(key) || passes.length >= getOcrPassLimit()) return;
+      const defaultWhitelist = `TS-${OCR_LEGACY_WHITELIST}`;
+      const hardLimit = getOcrPassLimit();
+
+      const add = (label, width, rotation, style, y, h, psm = 7, x = 0, whitelist = defaultWhitelist) => {
+        y = Math.max(0, Math.min(.96, Number(y) || 0));
+        h = Math.max(.08, Math.min(1 - y, Number(h) || .22));
+        width = Math.max(.045, Math.min(.18, Number(width) || .09));
+        x = Math.max(0, Math.min(.035, Number(x) || 0));
+        const key = [width.toFixed(3), rotation, style, y.toFixed(3), h.toFixed(3), psm, x.toFixed(3)].join('|');
+        if (seen.has(key) || passes.length >= hardLimit) return;
         seen.add(key);
         const config = { label, width, rotation, style, y, h, psm, x, whitelist };
         passes.push({ ...config, canvas: makeVerticalStripCanvas(image, config) });
       };
 
-      // Full-height passes: always contains the code regardless of where
-      // it sits vertically in the frame. Most run with the restricted,
-      // OCR-safe whitelist (matches new codes/OCR-B font); the last two
-      // fall back to the full legacy whitelist for codes issued before
-      // the alphabet/font switch.
-      add('Full edge · clean',       .075, -90, 'contrast',  0, 1, 7, 0);
-      add('Full edge · raw',         .075, -90, 'raw',       0, 1, 7, 0);
-      add('Full edge · threshold',   .075, -90, 'threshold', 0, 1, 7, 0);
-      add('Full edge · adaptive',    .090, -90, 'adaptive',  0, 1, 7, 0);
-      add('Wider edge · clean',      .110, -90, 'contrast',  0, 1, 7, 0);
-      add('Full edge · reverse',     .075,  90, 'contrast',  0, 1, 7, 0);
-      add('Legacy · clean',          .085, -90, 'contrast',  0, 1, 7, .006, `TS-${OCR_LEGACY_WHITELIST}`);
-      add('Legacy · raw',            .085, -90, 'raw',       0, 1, 7, .006, `TS-${OCR_LEGACY_WHITELIST}`);
+      // Highest priority: read the WHOLE left vertical watermark strip.
+      // Do not start with middle/band crops — those can land on the radiator,
+      // wall, or the “Verify at TIMESNAP.INFO” wording. The first attempts now
+      // crop only the extreme left edge from top to bottom, rotate it into one
+      // horizontal line, and OCR the complete strip containing TS-XXXXXXX.
+      const fullLeftWidths = [.026, .032, .040, .050, .064, .080];
+      let fullIndex = 1;
+      for (const widthValue of fullLeftWidths) {
+        add(`Whole left vertical strip ${fullIndex} · white text mask`, widthValue, -90, 'whiteTextMask', 0, 1, 7, 0, defaultWhitelist);
+        add(`Whole left vertical strip ${fullIndex} · contrast`, widthValue, -90, 'contrast', 0, 1, 7, 0, defaultWhitelist);
+        if (fullIndex <= 4) add(`Whole left vertical strip ${fullIndex} · threshold`, widthValue, -90, 'threshold', 0, 1, 7, 0, defaultWhitelist);
+        if (fullIndex <= 3) add(`Whole left vertical strip ${fullIndex} · raw`, widthValue, -90, 'raw', 0, 1, 7, 0, defaultWhitelist);
+        fullIndex++;
+      }
+
+      // Opposite rotation for exports where the left-edge text direction is reversed.
+      add('Whole left vertical strip · reverse mask', .040, 90, 'whiteTextMask', 0, 1, 7, 0, defaultWhitelist);
+      add('Whole left vertical strip · reverse contrast', .050, 90, 'contrast', 0, 1, 7, 0, defaultWhitelist);
+
+      // Secondary attempts: full-height strip with a small inward offset. This
+      // catches screenshots where the very outer edge was cropped by the sender.
+      [.010, .018, .026].forEach((xValue, i) => {
+        add(`Whole left strip inward ${i + 1} · mask`, .052, -90, 'whiteTextMask', 0, 1, 7, xValue, defaultWhitelist);
+        add(`Whole left strip inward ${i + 1} · contrast`, .064, -90, 'contrast', 0, 1, 7, xValue, defaultWhitelist);
+      });
+
+      const detected = findLeftEdgeCodeBands(image);
+      detected.forEach((band, i) => {
+        add(`Detected code band ${i + 1} · OCR-B raw`, .105, -90, 'raw', band.y, band.h, 7, 0, defaultWhitelist);
+        add(`Detected code band ${i + 1} · OCR-B contrast`, .105, -90, 'contrast', band.y, band.h, 7, 0, defaultWhitelist);
+        add(`Detected code band ${i + 1} · OCR-B threshold`, .105, -90, 'threshold', band.y, band.h, 7, 0, defaultWhitelist);
+        add(`Detected code band ${i + 1} · wider`, .135, -90, 'contrast', Math.max(0, band.y - .035), Math.min(.42, band.h + .07), 7, 0, defaultWhitelist);
+      });
+
+      // Last resort only: overlapping pieces of the left strip. These are kept
+      // after the full-strip attempts, so the scanner prioritises the whole
+      // vertical code instead of random horizontal wording.
+      const windows = [
+        [0, .50], [.18, .50], [.36, .50], [.52, .42]
+      ];
+      windows.forEach(([y, h], i) => {
+        add(`Left strip segment ${i + 1} · mask`, .060, -90, 'whiteTextMask', y, h, 7, 0, defaultWhitelist);
+        add(`Left strip segment ${i + 1} · contrast`, .070, -90, 'contrast', y, h, 7, 0, defaultWhitelist);
+      });
+
+      // Reverse rotation fallback for images exported with the overlay in the
+      // opposite reading direction.
+      add('Reverse upper band · contrast', .115, 90, 'contrast', .05, .42, 7, 0, defaultWhitelist);
+      add('Reverse middle band · contrast', .115, 90, 'contrast', .30, .42, 7, 0, defaultWhitelist);
 
       return passes;
     }
 
+    function findLeftEdgeCodeBands(image) {
+      const iw = image.naturalWidth || image.width;
+      const ih = image.naturalHeight || image.height;
+      if (!iw || !ih) return [];
+      const sampleW = Math.max(42, Math.round(iw * .14));
+      const sampleH = Math.min(900, Math.max(360, Math.round(ih * (sampleW / Math.max(1, iw)) * 6)));
+      const canvas = document.createElement('canvas');
+      canvas.width = sampleW;
+      canvas.height = sampleH;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(image, 0, 0, sampleW, ih, 0, 0, sampleW, sampleH);
+      const { data } = ctx.getImageData(0, 0, sampleW, sampleH);
+      const rowScores = new Float32Array(sampleH);
+
+      for (let y = 0; y < sampleH; y++) {
+        let score = 0;
+        for (let x = 0; x < sampleW; x++) {
+          const i = (y * sampleW + x) * 4;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          const lum = .299 * r + .587 * g + .114 * b;
+          // White/grey overlay text: bright, low saturation. This ignores most
+          // real-world photo content but keeps the TimeSnap edge watermark.
+          if (lum > 142 && (max - min) < 72) score += (lum - 120) / 135;
+        }
+        rowScores[y] = score;
+      }
+
+      // Smooth the row signal so individual letters become one code band.
+      const smooth = new Float32Array(sampleH);
+      const radius = Math.max(4, Math.round(sampleH * .008));
+      for (let y = 0; y < sampleH; y++) {
+        let sum = 0, count = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const yy = y + k;
+          if (yy >= 0 && yy < sampleH) { sum += rowScores[yy]; count++; }
+        }
+        smooth[y] = sum / Math.max(1, count);
+      }
+
+      const sorted = Array.from(smooth).sort((a, b) => a - b);
+      const p85 = sorted[Math.floor(sorted.length * .85)] || 0;
+      const threshold = Math.max(1.8, p85 * .55);
+      const clusters = [];
+      let start = -1;
+      for (let y = 0; y < sampleH; y++) {
+        if (smooth[y] >= threshold) {
+          if (start < 0) start = y;
+        } else if (start >= 0) {
+          if (y - start > sampleH * .025) clusters.push([start, y]);
+          start = -1;
+        }
+      }
+      if (start >= 0 && sampleH - start > sampleH * .025) clusters.push([start, sampleH - 1]);
+
+      const bands = clusters
+        .map(([a, b]) => {
+          const pad = Math.round(sampleH * .055);
+          const y1 = Math.max(0, a - pad);
+          const y2 = Math.min(sampleH, b + pad);
+          return { y: y1 / sampleH, h: Math.max(.12, (y2 - y1) / sampleH), strength: smooth.slice(a, b).reduce((s, v) => s + v, 0) };
+        })
+        .sort((a, b) => b.strength - a.strength)
+        .slice(0, 3);
+
+      // Always include a broad centre-left band because most TimeSnap overlays
+      // place the vertical code around the centre third of the left edge.
+      bands.push({ y: .18, h: .46, strength: 0 });
+      return bands;
+    }
+
     function getOcrPassLimit() {
-      // iPhone/iPad and low-memory browsers need a very small OCR workload.
+      // More attempts than the previous mobile-safe version, but still bounded
+      // so browsers do not crash. The first attempts are now smarter detected
+      // crops, so we get more power without blindly processing huge canvases.
       const memory = Number(navigator.deviceMemory || 4);
       const mobile = /iphone|ipad|ipod|android|mobile/i.test(navigator.userAgent || '');
-      if (mobile || memory <= 2) return 8;
-      return 10;
+      if (mobile || memory <= 2) return 24;
+      return 42;
     }
 
     function makeVerticalStripCanvas(image, config) {
@@ -1227,12 +1474,15 @@
       const limiter = Math.min(1, maxSide / Math.max(drawW, drawH));
       const finalW = Math.max(1, Math.round(drawW * limiter));
       const finalH = Math.max(1, Math.round(drawH * limiter));
+      const pad = Math.max(14, Math.round(finalW * .08));
       const canvas = document.createElement('canvas');
-      canvas.width = finalH;
-      canvas.height = finalW;
+      canvas.width = finalH + pad * 2;
+      canvas.height = finalW + pad * 2;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.translate(canvas.width / 2, canvas.height / 2);
       ctx.rotate((config.rotation * Math.PI) / 180);
       ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, -finalW / 2, -finalH / 2, finalW, finalH);
@@ -1263,6 +1513,16 @@
         if (style === 'contrast') value = Math.max(0, Math.min(255, (normalised - 110) * 1.55 + 128));
         if (style === 'threshold') value = lum[pixel] > threshold ? 255 : 0;
         if (style === 'adaptive') value = normalised > Math.max(85, threshold - 22) ? 255 : 0;
+        if (style === 'whiteTextMask') {
+          // TimeSnap left strip is white/grey overlay text on mixed photo
+          // content. Convert bright low-saturation text into black ink on a
+          // white background and suppress the rest. This stops OCR reading the
+          // radiator/wall texture as text.
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          const sat = max - min;
+          value = (lum[pixel] > Math.max(145, high - 68) && sat < 92) ? 0 : 255;
+        }
         if (style === 'invert') value = 255 - normalised;
         if (style === 'sharpen') value = Math.max(0, Math.min(255, (normalised - 128) * 1.9 + 128));
         data[i] = data[i + 1] = data[i + 2] = value;
@@ -1324,7 +1584,7 @@
       return state.ocrWorker;
     }
 
-    async function readTimeSnapCode(passes) {
+    async function readTimeSnapCode(passes, image) {
       const attempts = [];
       const candidateScores = new Map();
       const addCandidate = (candidate, confidence = 0, bonus = 0) => {
@@ -1361,9 +1621,8 @@
 
       const worker = await getOcrWorker();
       const maxTesseractPasses = Math.min(getOcrPassLimit(), passes.length);
-      for (let index = 0; index < maxTesseractPasses; index++) {
-        const pass = passes[index];
-        setProgress(47 + Math.min(index * 3.2, 28), `OCR pass ${index + 1} of ${maxTesseractPasses}`, `${pass.label}: reading the left-edge TS code.`);
+
+      const runPass = async (pass) => {
         try {
           await worker.setParameters({
             tessedit_pageseg_mode: String(pass.psm || 7),
@@ -1377,20 +1636,50 @@
           const repaired = buildCandidatesFromPartials(partials, 50);
           const allCodes = [...new Set([...codes, ...repaired])];
           attempts.push({ label: pass.label, canvas: pass.canvas, raw, confidence, code: allCodes[0] || null, codes: allCodes.slice(0, 10) });
-
           allCodes.forEach((candidate, candidateIndex) => {
             const fromCleanCode = codes.includes(candidate);
             addCandidate(candidate, confidence, (fromCleanCode ? 16 : 5) + (candidateIndex === 0 ? 8 : 0));
           });
-
-          // Stop early when we have a clean high-confidence code. Firebase will
-          // still try repaired variants if needed.
-          if (codes.length && confidence >= 70) break;
+          return { raw, confidence, codes, pass };
         } catch (error) {
           attempts.push({ label: pass.label, canvas: pass.canvas, raw: error.message || 'OCR skipped', confidence: 0, code: null, codes: [] });
           console.warn('OCR pass skipped:', error);
+          return { raw: '', confidence: 0, codes: [], pass };
         }
+      };
+
+      let bestSignal = null; // the pass with the most non-blank output, even if not a valid code
+      for (let index = 0; index < maxTesseractPasses; index++) {
+        setProgress(47 + Math.min(index * 3.2, 28), `OCR pass ${index + 1} of ${maxTesseractPasses}`, `${passes[index].label}: reading the left-edge TS code.`);
+        const outcome = await runPass(passes[index]);
+        if (outcome.raw.replace(/\s+/g, '').length > (bestSignal?.raw.replace(/\s+/g, '').length || 0)) bestSignal = outcome;
+        if (outcome.codes.length && outcome.confidence >= 70) { bestSignal = null; break; } // clean hit, no refinement needed
         await idlePause();
+      }
+
+      // Adaptive refinement: if nothing produced a clean, high-confidence
+      // code, but some pass clearly found the watermark (non-trivial raw
+      // text came back), that pass's window is almost certainly the right
+      // location — the remaining problem is character-level accuracy, not
+      // position. Re-scan that exact spot with different enhancement
+      // styles instead of continuing to guess blindly at other positions.
+      const haveCleanCode = Array.from(candidateScores.values()).some(c => c.confidence >= 55);
+      if (!haveCleanCode && bestSignal && bestSignal.raw.replace(/\s+/g, '').length >= 2 && image) {
+        const basePass = bestSignal.pass;
+        const triedStyles = new Set(passes.filter(p => p.y === basePass.y && p.h === basePass.h).map(p => p.style));
+        const refinementStyles = ['threshold', 'adaptive', 'sharpen', 'invert'].filter(s => !triedStyles.has(s));
+        const refinementBudget = Math.max(0, getOcrPassLimit() - attempts.length);
+        refinementStyles.slice(0, refinementBudget).forEach((style, i) => {
+          const config = { label: `Refine · ${style}`, width: basePass.width + .02, rotation: basePass.rotation, style, y: basePass.y, h: basePass.h, psm: basePass.psm, x: basePass.x, whitelist: basePass.whitelist };
+          const canvas = makeVerticalStripCanvas(image, config);
+          passes.push({ ...config, canvas }); // so it's visible in the evidence panel too
+        });
+        for (let index = maxTesseractPasses; index < passes.length; index++) {
+          setProgress(76 + (index - maxTesseractPasses) * 2, `Refining match ${index - maxTesseractPasses + 1}`, `${passes[index].label}: zooming in on the located code.`);
+          const outcome = await runPass(passes[index]);
+          if (outcome.codes.length && outcome.confidence >= 55) break;
+          await idlePause();
+        }
       }
 
       const candidates = Array.from(candidateScores.values())
