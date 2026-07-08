@@ -1,15 +1,17 @@
-<html lang="en" data-theme="dark"><head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#071217">
-  <meta name="description" content="TimeSnap photo verification">
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#071217" />
+  <meta name="description" content="TimeSnap photo verification" />
   <title>TimeSnap Verify — Evidence you can trust</title>
 
   <!-- Libraries: Leaflet map + browser OCR. Uses native TextDetector when available, then Tesseract fallback. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 
   <style>
     :root {
@@ -446,14 +448,14 @@
     <header class="topbar">
       <a class="brand" href="#" aria-label="TimeSnap Verify home">
         <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.8"></path></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"/><path d="m8.7 12.1 2.1 2.1 4.6-4.8"/></svg>
         </span>
         <span>TimeSnap <em style="font-style:normal;color:var(--mint)">Verify</em></span>
       </a>
       <div class="topbar-right">
         <span class="secure-mark"><i class="secure-dot"></i> PRIVATE SCAN</span>
         <button class="icon-button" id="themeToggle" type="button" aria-label="Change colour theme" title="Change colour theme">
-          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.7 15.5A8.5 8.5 0 0 1 8.5 3.3 8.5 8.5 0 1 0 20.7 15.5Z"></path></svg>
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.7 15.5A8.5 8.5 0 0 1 8.5 3.3 8.5 8.5 0 1 0 20.7 15.5Z"/></svg>
         </button>
       </div>
     </header>
@@ -472,10 +474,10 @@
             <p class="panel-copy">The scanner is tuned for the vertical <strong>TS-XXXXXXX</strong> code printed on the left side of TimeSnap images.</p>
 
             <label class="drop-zone" id="dropZone" for="fileInput">
-              <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+              <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" />
               <div class="upload-content">
                 <div class="upload-symbol" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="m7.5 8.5 4.5-4.5 4.5 4.5"></path><path d="M5 14.5v3.25A2.25 2.25 0 0 0 7.25 20h9.5A2.25 2.25 0 0 0 19 17.75V14.5"></path></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 14.5v3.25A2.25 2.25 0 0 0 7.25 20h9.5A2.25 2.25 0 0 0 19 17.75V14.5"/></svg>
                 </div>
                 <h3 class="upload-title">Choose photo or drag it in</h3>
                 <p class="upload-subtitle">Your image is processed in this browser for code reading. Only the code is looked up in the verification registry.</p>
@@ -483,7 +485,7 @@
               </div>
             </label>
             <p class="left-edge-note">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.8 2.8 17a2 2 0 0 0 1.74 3h14.92a2 2 0 0 0 1.74-3L13.7 3.8a2 2 0 0 0-3.4 0Z"></path></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.8 2.8 17a2 2 0 0 0 1.74 3h14.92a2 2 0 0 0 1.74-3L13.7 3.8a2 2 0 0 0-3.4 0Z"/></svg>
               <span>For best results, keep the full left edge visible and avoid screenshots that cut off the vertical code strip.</span>
             </p>
           </section>
@@ -502,25 +504,25 @@
             <label class="field-label" for="manualCode">Verification code</label>
             <div class="code-input-wrap">
               <span class="prefix">TS-</span>
-              <input class="code-input" id="manualCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="7" placeholder="6USHIQY" aria-describedby="manualHelp">
+              <input class="code-input" id="manualCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="7" placeholder="6USHIQY" aria-describedby="manualHelp" />
             </div>
             <p class="input-help" id="manualHelp">Enter the 7 characters after <strong>TS-</strong>.</p>
             <button class="button button-primary manual-action" id="manualVerify" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"></circle><path d="m20 20-4.25-4.25"></path></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.25-4.25"/></svg>
               Verify code
             </button>
 
             <p class="privacy-note">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="15" height="11" x="4.5" y="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="15" height="11" x="4.5" y="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
               <span>Registry status confirms that a code exists. A code match alone cannot prove every pixel in a shared or edited image is unchanged.</span>
             </p>
           </aside>
         </div>
 
         <div class="trust-row" aria-label="Verification workflow">
-          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"></path></svg></span><strong>Left-edge OCR</strong><span>Vertical overlay reader</span></div>
-          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"></path><path d="M8 8h8v8H8z"></path></svg></span><strong>Firebase registry</strong><span>Direct document lookup</span></div>
-          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"></path><path d="m8.5 12 2.1 2.1L15.9 9"></path></svg></span><strong>Clear results</strong><span>Maps, report and sharing</span></div>
+          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/></svg></span><strong>Left-edge OCR</strong><span>Vertical overlay reader</span></div>
+          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/></svg></span><strong>Firebase registry</strong><span>Direct document lookup</span></div>
+          <div class="trust-item"><span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"/><path d="m8.5 12 2.1 2.1L15.9 9"/></svg></span><strong>Clear results</strong><span>Maps, report and sharing</span></div>
         </div>
       </section>
 
@@ -529,7 +531,7 @@
         <div class="scan-layout">
           <section class="panel image-card" aria-label="Image scan preview">
             <div class="image-frame">
-              <img id="scanPreview" alt="Selected TimeSnap photo preview">
+              <img id="scanPreview" alt="Selected TimeSnap photo preview" />
               <div class="preview-caption"><span id="scanFilename">Selected image</span><span id="scanDimensions">loading…</span></div>
             </div>
             <div class="image-scan-meter" aria-hidden="true"><i></i><span>OCR reader active</span><span class="image-scan-meter-track"></span></div>
@@ -550,11 +552,11 @@
             </div>
 
             <div class="steps">
-              <div class="scan-step" id="stepLoad"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2.5 1.5"></path></svg></span><div class="step-content"><strong>Load the selected image</strong><span>Creates a private local preview for the scan animation.</span></div></div>
-              <div class="scan-step" id="stepCrop"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"></path></svg></span><div class="step-content"><strong>Isolate the left vertical strip</strong><span>Targets the outer-left edge and enhances the TimeSnap overlay.</span></div></div>
-              <div class="scan-step" id="stepOcr"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"></path></svg></span><div class="step-content"><strong>Read TS verification code</strong><span>Uses a mobile-safe native/TextDetector scan, then a small Tesseract fallback.</span></div></div>
-              <div class="scan-step" id="stepRegistry"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="7" ry="3"></ellipse><path d="M5 5v7c0 1.65 3.13 3 7 3s7-1.35 7-3V5"></path><path d="M5 12v7c0 1.65 3.13 3 7 3s7-1.35 7-3v-7"></path></svg></span><div class="step-content"><strong>Check TimeSnap registry</strong><span>Requests the matching Firebase record.</span></div></div>
-              <div class="scan-step" id="stepScreen"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.8"></path></svg></span><div class="step-content"><strong>Build evidence report</strong><span>Scores scan quality and available file checks.</span></div></div>
+              <div class="scan-step" id="stepLoad"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/></svg></span><div class="step-content"><strong>Load the selected image</strong><span>Creates a private local preview for the scan animation.</span></div></div>
+              <div class="scan-step" id="stepCrop"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg></span><div class="step-content"><strong>Isolate the left vertical strip</strong><span>Targets the outer-left edge and enhances the TimeSnap overlay.</span></div></div>
+              <div class="scan-step" id="stepOcr"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><div class="step-content"><strong>Read TS verification code</strong><span>Uses a mobile-safe native/TextDetector scan, then a small Tesseract fallback.</span></div></div>
+              <div class="scan-step" id="stepRegistry"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v7c0 1.65 3.13 3 7 3s7-1.35 7-3V5"/><path d="M5 12v7c0 1.65 3.13 3 7 3s7-1.35 7-3v-7"/></svg></span><div class="step-content"><strong>Check TimeSnap registry</strong><span>Requests the matching Firebase record.</span></div></div>
+              <div class="scan-step" id="stepScreen"><span class="step-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 4.5 6.4v5.1c0 4.85 3.2 8.25 7.5 9.5 4.3-1.25 7.5-4.65 7.5-9.5V6.4L12 3Z"/><path d="m8.7 12.1 2.1 2.1 4.6-4.8"/></svg></span><div class="step-content"><strong>Build evidence report</strong><span>Scores scan quality and available file checks.</span></div></div>
             </div>
 
             <div class="scan-tip"><strong>Tip:</strong> We check the file's embedded metadata first — fast and reliable, no OCR needed. OCR only runs as a fallback if the file's metadata was stripped (common after WhatsApp/Instagram re-sharing), and if that fails too, a manual code popup opens.</div>
@@ -566,7 +568,7 @@
       <section id="viewResults" class="view" aria-live="polite">
         <section class="result-head">
           <div class="status-line">
-            <span class="status-icon verified" id="resultIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <span class="status-icon verified" id="resultIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
             <div>
               <p class="result-eyebrow" id="resultEyebrow">Registry match confirmed</p>
               <h1 class="result-title" id="resultTitle">This TimeSnap code is verified</h1>
@@ -578,7 +580,7 @@
 
         <div class="result-grid">
           <section class="panel result-photo-card" aria-label="Uploaded photo">
-            <div class="result-photo-wrap"><img id="resultPreview" alt="Uploaded photo being verified"></div>
+            <div class="result-photo-wrap"><img id="resultPreview" alt="Uploaded photo being verified" /></div>
             <div class="result-photo-meta"><strong id="resultPhotoName">Uploaded photo</strong><span id="resultPhotoInfo">Evidence preview</span></div>
           </section>
 
@@ -595,15 +597,15 @@
               <div class="detail"><span class="detail-label">OCR / entry confidence</span><span class="detail-value" id="detailConfidence">—</span></div>
               <div class="detail detail-wide"><span class="detail-label">Registry reference</span><span class="detail-value mono" id="detailReference">—</span></div>
             </div>
-            <div class="map-mini" id="miniMapCard" hidden="">
+            <div class="map-mini" id="miniMapCard" hidden>
               <div class="location-top"><div><span class="detail-label">Map pin</span><p class="location-name" id="locationName">Coordinates available</p></div><button class="button button-secondary" id="openMapFromCard" type="button" style="min-height:32px;padding:0 10px;font-size:10px">View below</button></div>
               <span class="location-precision" id="locationCoords">—</span>
-              <span class="location-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="10" r="3"></circle><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"></path></svg></span>
+              <span class="location-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="10" r="3"/><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/></svg></span>
             </div>
           </section>
 
           <aside class="panel confidence-card">
-            <div class="card-heading"><h2>Authenticity signals</h2><button class="icon-button" id="screeningInfo" type="button" aria-label="About authenticity signals" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"></circle><path d="M12 11v5M12 8h.01"></path></svg></button></div>
+            <div class="card-heading"><h2>Authenticity signals</h2><button class="icon-button" id="screeningInfo" type="button" aria-label="About authenticity signals" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8h.01"/></svg></button></div>
             <div class="confidence-main">
               <div class="score-ring" id="scoreRing" style="--score:0"><div class="score-value"><strong id="scoreNumber">—</strong><span>scan score</span></div></div>
               <p class="screening-label" id="screeningLabel">Waiting for analysis</p>
@@ -617,14 +619,14 @@
           </aside>
         </div>
 
-        <section class="panel inline-map-card" id="inlineMapCard" hidden="">
+        <section class="panel inline-map-card" id="inlineMapCard" hidden>
           <div class="inline-map-head"><div><h2>Recorded capture location</h2><span class="location-precision" id="inlineMapCoords">—</span></div><button class="button button-secondary" id="openMap" type="button" style="min-height:38px;font-size:11px">Open in Google Maps</button></div>
           <div id="resultMap" aria-label="Map of recorded capture location"></div>
         </section>
 
         <div class="actions">
-          <button class="button button-primary" id="shareReport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"></path></svg>Share report</button>
-          <button class="button button-secondary" id="scanAgain" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4v5h5"></path><path d="M20 20v-5h-5"></path><path d="M5.5 15a7 7 0 0 0 11.9 2.1L20 15M4 9l2.6-2.1A7 7 0 0 1 18.5 9"></path></svg>Verify another</button>
+          <button class="button button-primary" id="shareReport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>Share report</button>
+          <button class="button button-secondary" id="scanAgain" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4v5h5"/><path d="M20 20v-5h-5"/><path d="M5.5 15a7 7 0 0 0 11.9 2.1L20 15M4 9l2.6-2.1A7 7 0 0 1 18.5 9"/></svg>Verify another</button>
         </div>
 
         <details class="panel scanner-evidence" id="evidencePanel">
@@ -635,13 +637,13 @@
       </section>
     </main>
 
-    <footer class="footer"><span>© <span id="year">2026</span> TimeSnap. Verification status is based on available registry data.</span><a href="#mainHeading">Back to top</a></footer>
+    <footer class="footer"><span>© <span id="year"></span> TimeSnap. Verification status is based on available registry data.</span><a href="#mainHeading">Back to top</a></footer>
   </div>
 
   <!-- Share report dialog -->
   <section class="modal" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
     <div class="modal-box">
-      <header class="modal-head"><h2 id="shareModalTitle">Share verification report</h2><button class="icon-button" type="button" data-close-modal="shareModal" aria-label="Close share dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></header>
+      <header class="modal-head"><h2 id="shareModalTitle">Share verification report</h2><button class="icon-button" type="button" data-close-modal="shareModal" aria-label="Close share dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <div class="modal-body"><div class="share-report" id="shareText">—</div><div class="modal-actions"><button class="button button-primary" id="nativeShare" type="button">Use share menu</button><button class="button button-secondary" id="copyShare" type="button">Copy report text</button></div></div>
     </div>
   </section>
@@ -649,11 +651,11 @@
   <!-- Manual code recovery dialog -->
   <section class="modal" id="manualRetryModal" role="dialog" aria-modal="true" aria-labelledby="manualRetryTitle">
     <div class="modal-box manual-code-modal">
-      <header class="modal-head"><h2 id="manualRetryTitle">Enter the visible TimeSnap code</h2><button class="icon-button" type="button" data-close-modal="manualRetryModal" aria-label="Close manual code dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></header>
+      <header class="modal-head"><h2 id="manualRetryTitle">Enter the visible TimeSnap code</h2><button class="icon-button" type="button" data-close-modal="manualRetryModal" aria-label="Close manual code dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <div class="modal-body">
         <p>The photo code could not be confirmed automatically. Check the vertical code on the far left edge and type the seven characters after <strong>TS-</strong>.</p>
         <label class="field-label" for="manualRetryCode">Verification code</label>
-        <div class="code-input-wrap"><span class="prefix">TS-</span><input class="code-input" id="manualRetryCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="7" placeholder="6USHLOY" aria-describedby="manualRetryHelp"></div>
+        <div class="code-input-wrap"><span class="prefix">TS-</span><input class="code-input" id="manualRetryCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="7" placeholder="6USHLOY" aria-describedby="manualRetryHelp" /></div>
         <p class="input-help" id="manualRetryHelp">Enter exactly seven letters or numbers.</p>
         <div class="manual-modal-actions"><button class="button button-secondary" type="button" data-close-modal="manualRetryModal">Cancel</button><button class="button button-primary" id="manualRetryVerify" type="button">Verify code</button></div>
       </div>
@@ -663,7 +665,7 @@
   <!-- Map dialog -->
   <section class="modal" id="mapModal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
     <div class="modal-box map-box">
-      <header class="modal-head"><h2 id="mapModalTitle">Verified capture location</h2><button class="icon-button" type="button" data-close-modal="mapModal" aria-label="Close map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></header>
+      <header class="modal-head"><h2 id="mapModalTitle">Verified capture location</h2><button class="icon-button" type="button" data-close-modal="mapModal" aria-label="Close map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <div id="map"></div>
       <div class="map-modal-info" id="mapInfo">Map location shown from the verification record.</div>
       <div class="modal-body" style="padding-top:0"><div class="modal-actions"><button class="button button-secondary" id="openGoogleMaps" type="button">Open in Google Maps</button></div></div>
@@ -673,7 +675,7 @@
   <!-- Screening explanation -->
   <section class="modal" id="screeningModal" role="dialog" aria-modal="true" aria-labelledby="screeningModalTitle">
     <div class="modal-box">
-      <header class="modal-head"><h2 id="screeningModalTitle">What visual screening means</h2><button class="icon-button" type="button" data-close-modal="screeningModal" aria-label="Close explanation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></header>
+      <header class="modal-head"><h2 id="screeningModalTitle">What visual screening means</h2><button class="icon-button" type="button" data-close-modal="screeningModal" aria-label="Close explanation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <div class="modal-body" style="color:var(--muted);font-size:13px;line-height:1.75">
         <p style="margin-top:0;color:var(--text);font-weight:800">This score is deliberately not called an “AI detector”.</p>
         <p>From a browser-only page, it is not honest or reliable to claim that a photo is definitely AI-generated, edited, or unedited. The score combines readable-code confidence, registry match status, and an optional exact file-fingerprint comparison when your Firebase record stores a SHA-256 hash.</p>
@@ -682,11 +684,12 @@
     </div>
   </section>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon" id="toastIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"></path></svg></span><div><strong id="toastTitle">Done</strong><p id="toastText"></p></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon" id="toastIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><strong id="toastTitle">Done</strong><p id="toastText"></p></div></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
   <script type="module">
     /*
@@ -964,6 +967,30 @@
       catch (_) { return ''; }
     }
 
+    // Decodes a QR code drawn into the watermark. Far more reliable than
+    // text OCR: QR has built-in error correction and is read as black/white
+    // modules rather than font shapes, so blur/compression/low-res barely
+    // affect it. Requires the Flutter app to draw a QR alongside the
+    // visible watermark text (same TS-XXXXXXX payload).
+    function extractCodeFromQr(image) {
+      if (!window.jsQR) return null;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const result = jsQR(imageData.data, imageData.width, imageData.height);
+        if (!result || !result.data) return null;
+        const match = result.data.match(/TS-[A-Z0-9]{5,9}/i);
+        return match ? match[0].toUpperCase() : null;
+      } catch (error) {
+        console.warn('QR read skipped:', error);
+        return null;
+      }
+    }
+
     async function runImageScan(file) {
       setStep('load', 'active', 'Loading the selected image into memory.');
       setProgress(10, 'Loading image', 'Preparing a private local image preview.');
@@ -972,16 +999,19 @@
       setStep('load', 'done', 'Image loaded locally.');
 
       setStep('crop', 'active', 'Checking embedded verification metadata.');
-      setProgress(20, 'Reading metadata', 'Checking the file for an embedded TimeSnap code (no OCR needed).');
+      setProgress(18, 'Reading metadata', 'Checking the file for an embedded TimeSnap code (no OCR needed).');
       const exifCode = await extractCodeFromExif(file);
-      if (exifCode) {
-        setStep('crop', 'done', 'Verification code found in file metadata.');
-        setStep('ocr', 'done', `Read ${exifCode} directly from EXIF — no OCR required.`);
-        setProgress(76, 'Checking registry', `Looking up ${exifCode} in the TimeSnap registry.`);
-        setStep('registry', 'active', `Checking ${exifCode} against the Firebase registry.`);
+      const qrCode = exifCode ? null : extractCodeFromQr(image);
+      const directCode = exifCode || qrCode;
+      if (directCode) {
+        const method = exifCode ? 'EXIF metadata read' : 'QR code scan';
+        setStep('crop', 'done', exifCode ? 'Verification code found in file metadata.' : 'QR code detected in watermark.');
+        setStep('ocr', 'done', `Read ${directCode} via ${method} — no text OCR required.`);
+        setProgress(76, 'Checking registry', `Looking up ${directCode} in the TimeSnap registry.`);
+        setStep('registry', 'active', `Checking ${directCode} against the Firebase registry.`);
         await runLookup({
-          code: exifCode,
-          method: 'EXIF metadata read',
+          code: directCode,
+          method,
           ocrConfidence: 100,
           file,
           fileHash,
@@ -990,7 +1020,7 @@
         });
         return;
       }
-      setStep('crop', 'active', 'No embedded metadata found — falling back to OCR.');
+      setStep('crop', 'active', 'No metadata or QR found — falling back to text OCR.');
       setProgress(25, 'Preparing edge OCR crops', 'Reading the middle code zone on the outer-left TimeSnap strip.');
       const passes = createOcrPasses(image);
       state.ocrAttempts = passes.map(pass => ({ label: pass.label, canvas: pass.canvas, raw: '', confidence: 0, code: null }));
@@ -1136,35 +1166,38 @@
       /*
        * Mobile-safe TimeSnap OCR pipeline
        * ------------------------------------------------------------------
-       * Heavy OCR loops were crashing Safari/Chrome/Firefox because the old
-       * scanner created too many high-resolution canvases. This version keeps
-       * the same design, but only prepares a small set of targeted crops.
-       * It first targets the clear middle code band, then tries a few wider
-       * fallback strips. The Firebase retry system still corrects common OCR
-       * mistakes after reading.
+       * Previous version cropped narrow bands at fixed height fractions
+       * (e.g. y=.235–.30), assuming the code always sits near the top
+       * quarter of the frame. That assumption broke on photos where the
+       * watermark lands lower (different aspect ratios / longer address
+       * lines push it down) — the OCR was reading blank wall, not
+       * misreading the code. This version reads the FULL left edge
+       * (y: 0 to 1) so the code is always inside the crop no matter where
+       * it sits vertically, and only varies width/contrast/rotation.
        */
       const passes = [];
       const seen = new Set();
-      const add = (label, width, rotation, style, y, h, psm = 7, x = 0) => {
+      const add = (label, width, rotation, style, y, h, psm = 7, x = 0, whitelist = `TS-${OCR_SAFE_ALPHABET}`) => {
         const key = [width, rotation, style, y, h, psm, x].join('|');
         if (seen.has(key) || passes.length >= getOcrPassLimit()) return;
         seen.add(key);
-        const config = { label, width, rotation, style, y, h, psm, x };
+        const config = { label, width, rotation, style, y, h, psm, x, whitelist };
         passes.push({ ...config, canvas: makeVerticalStripCanvas(image, config) });
       };
 
-      // Strongest first. These are tuned for the visible horizontal TS code
-      // after rotating the vertical TimeSnap strip.
-      add('Code band · clean',       .070, -90, 'contrast',  .235, .255, 7, 0);
-      add('Code band · raw',         .070, -90, 'raw',       .235, .255, 7, 0);
-      add('Code band · threshold',   .070, -90, 'threshold', .235, .255, 7, 0);
-      add('Code band · adaptive',    .082, -90, 'adaptive',  .225, .275, 7, 0);
-      add('Wider edge · clean',      .095, -90, 'contrast',  .215, .300, 7, 0);
-      add('Outer edge · clean',      .058, -90, 'contrast',  .235, .255, 7, 0);
-      add('Slight offset · clean',   .082, -90, 'contrast',  .225, .275, 7, .006);
-      add('Slight offset · raw',     .082, -90, 'raw',       .225, .275, 7, .006);
-      add('Lower fallback · clean',  .090, -90, 'contrast',  .280, .270, 7, 0);
-      add('Reverse fallback · clean',.082,  90, 'contrast',  .225, .275, 7, 0);
+      // Full-height passes: always contains the code regardless of where
+      // it sits vertically in the frame. Most run with the restricted,
+      // OCR-safe whitelist (matches new codes/OCR-B font); the last two
+      // fall back to the full legacy whitelist for codes issued before
+      // the alphabet/font switch.
+      add('Full edge · clean',       .075, -90, 'contrast',  0, 1, 7, 0);
+      add('Full edge · raw',         .075, -90, 'raw',       0, 1, 7, 0);
+      add('Full edge · threshold',   .075, -90, 'threshold', 0, 1, 7, 0);
+      add('Full edge · adaptive',    .090, -90, 'adaptive',  0, 1, 7, 0);
+      add('Wider edge · clean',      .110, -90, 'contrast',  0, 1, 7, 0);
+      add('Full edge · reverse',     .075,  90, 'contrast',  0, 1, 7, 0);
+      add('Legacy · clean',          .085, -90, 'contrast',  0, 1, 7, .006, `TS-${OCR_LEGACY_WHITELIST}`);
+      add('Legacy · raw',            .085, -90, 'raw',       0, 1, 7, .006, `TS-${OCR_LEGACY_WHITELIST}`);
 
       return passes;
     }
@@ -1263,13 +1296,21 @@
       return best;
     }
 
+    // Matches the restricted alphabet used for newly generated codes (drops
+    // visually ambiguous characters entirely: 0/O, 1/I/L, S/5, B, G/6).
+    // Telling Tesseract to only consider these characters is a much bigger
+    // accuracy win than any post-hoc guessing, since it never has to choose
+    // between two shapes that look nearly identical at low resolution.
+    const OCR_SAFE_ALPHABET = 'ACDEFHJKMNPQRTUVWXYZ23479';
+    const OCR_LEGACY_WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
+
     async function getOcrWorker() {
       if (!window.Tesseract) throw new Error('OCR library could not load. Check internet access or CDN blocking.');
       if (!state.ocrWorker) {
         state.ocrWorker = (async () => {
           const worker = await Tesseract.createWorker('eng');
           await worker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
+            tessedit_char_whitelist: `TS-${OCR_SAFE_ALPHABET}`,
             tessedit_pageseg_mode: '7',
             user_defined_dpi: '300',
             load_system_dawg: '0',
@@ -1324,7 +1365,10 @@
         const pass = passes[index];
         setProgress(47 + Math.min(index * 3.2, 28), `OCR pass ${index + 1} of ${maxTesseractPasses}`, `${pass.label}: reading the left-edge TS code.`);
         try {
-          await worker.setParameters({ tessedit_pageseg_mode: String(pass.psm || 7) });
+          await worker.setParameters({
+            tessedit_pageseg_mode: String(pass.psm || 7),
+            tessedit_char_whitelist: pass.whitelist || `TS-${OCR_SAFE_ALPHABET}`
+          });
           const result = await withTimeout(worker.recognize(pass.canvas), 9000, 'OCR pass timed out');
           const raw = String(result?.data?.text || '').trim();
           const confidence = Math.max(0, Number(result?.data?.confidence || 0));
@@ -1485,14 +1529,21 @@
     // Returns direct OCR readings first, then tightly bounded character
     // repairs. This targets real OCR confusions (for example O/Q, 5/S,
     // 8/B) without brute-forcing the whole Firestore collection.
-    function buildOcrRetryCandidates(seedCodes, limit = 120) {
+    function buildOcrRetryCandidates(seedCodes, limit = 180) {
       const substitutions = {
         'O': ['Q', '0', 'D', 'A'], 'Q': ['O', '0', 'A'], '0': ['O', 'Q', 'D'], 'A': ['O', 'Q', '4'],
         'S': ['5'], '5': ['S'], 'Z': ['2'], '2': ['Z'],
-        'B': ['8'], '8': ['B'], 'G': ['6'], '6': ['G'],
+        'B': ['8'], '8': ['B', '3'], 'G': ['6', '9', 'C'], '6': ['G'], '9': ['G'],
         'I': ['1', 'L'], '1': ['I', 'L'], 'L': ['I', '1'],
-        'V': ['Y', 'U'], 'Y': ['V'], 'U': ['V'], 'F': ['E', 'P'], 'E': ['F'],
-        'C': ['G'], 'D': ['O', '0']
+        'V': ['Y', 'U'], 'Y': ['V', 'T'], 'U': ['V'], 'F': ['E', 'P'], 'E': ['F'],
+        'C': ['G'], 'D': ['O', '0'],
+        'K': ['X'], 'X': ['K'], 'N': ['M', 'H'], 'M': ['N'], 'H': ['N'],
+        'R': ['P'], 'P': ['R'], 'T': ['7', 'Y'], '7': ['T'], '3': ['8'], '4': ['A'],
+        // Codes generated after the alphabet switch never legitimately
+        // contain these characters, so a read of any of them is always a
+        // misread of a safe-alphabet lookalike — bias repairs accordingly.
+        // (Kept alongside the pairs above so legacy pre-switch codes, which
+        // CAN legitimately contain these, still get repaired too.)
       };
       const output = [];
       const seen = new Set();
@@ -1521,14 +1572,14 @@
       // A small two-character fallback handles photos that are a little soft
       // or re-compressed by WhatsApp. It is deliberately capped to protect
       // performance and prevent unnecessary Firebase document reads.
-      seeds.slice(0, 6).forEach(seed => {
+      seeds.slice(0, 8).forEach(seed => {
         const chars = seed.slice(3).split('');
         const positions = chars.map((character, index) => ({ index, options: substitutions[character] || [] })).filter(item => item.options.length);
         for (let a = 0; a < positions.length && output.length < limit; a++) {
           for (let b = a + 1; b < positions.length && output.length < limit; b++) {
             const first = positions[a], second = positions[b];
-            for (const firstReplacement of first.options.slice(0, 2)) {
-              for (const secondReplacement of second.options.slice(0, 2)) {
+            for (const firstReplacement of first.options.slice(0, 3)) {
+              for (const secondReplacement of second.options.slice(0, 3)) {
                 const next = [...chars];
                 next[first.index] = firstReplacement;
                 next[second.index] = secondReplacement;
@@ -1864,6 +1915,5 @@
       return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
     }
   </script>
-
-
-</body></html>
+</body>
+</html>
