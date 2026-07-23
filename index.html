@@ -98,7 +98,7 @@ const db=getFirestore(initializeApp(firebaseConfig));
 const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
 const el={upload:$('#uploadView'),scan:$('#scanView'),result:$('#resultView'),file:$('#fileInput'),drop:$('#dropZone'),manual:$('#manualCode'),help:$('#manualHelp'),manualBtn:$('#manualBtn'),scanPreview:$('#scanPreview'),resultPreview:$('#resultPreview'),progress:$('#progressBar'),progressLabel:$('#progressLabel'),progressPercent:$('#progressPercent'),scanMessage:$('#scanMessage'),live:$('#liveState'),resultEye:$('#resultEye'),resultTitle:$('#resultTitle'),resultCopy:$('#resultCopy'),resultCode:$('#resultCode'),statusIcon:$('#statusIcon'),dTime:$('#dTime'),dSource:$('#dSource'),dMedia:$('#dMedia'),dAuth:$('#dAuth'),dLocation:$('#dLocation'),dCoords:$('#dCoords'),dMethod:$('#dMethod'),dConfidence:$('#dConfidence'),score:$('#score'),ring:$('#ring'),sigRead:$('#sigRead'),sigDb:$('#sigDb'),sigHash:$('#sigHash'),mapCard:$('#mapCard'),photoMeta:$('#photoMeta'),shareResultBtn:$('#shareResultBtn')};
 const steps={load:$('#sLoad'),crop:$('#sCrop'),code:$('#sCode'),db:$('#sDb'),report:$('#sReport')};
-const state={file:null,url:null,worker:null,attempts:[],report:null,map:null};
+const state={file:null,url:null,worker:null,attempts:[],report:null,map:null,sharedImageUrl:null,shareBusy:false};
 $('#year').textContent=new Date().getFullYear();
 function view(name){[el.upload,el.scan,el.result].forEach(v=>v.classList.remove('active'));el[name].classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
 function step(name,status){steps[name].className='step '+status;steps[name].querySelector('.dot').textContent=status==='done'?'✓':status==='fail'?'!':status==='active'?'…':({load:1,crop:2,code:3,db:4,report:5}[name])}
@@ -152,33 +152,75 @@ function renderMap(n){if(!Number.isFinite(n.lat)||!Number.isFinite(n.lng)){el.ma
 function manualPreview(code){const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960"><rect width="720" height="960" fill="#07101d"/><rect x="90" y="150" width="540" height="660" rx="34" fill="#10213c" stroke="#4d6aa8"/><text x="360" y="430" text-anchor="middle" fill="#dbe7ff" font-family="sans-serif" font-size="30" font-weight="700">DIRECT LOOKUP</text><text x="360" y="520" text-anchor="middle" fill="#79adff" font-family="monospace" font-size="36">${code}</text></svg>`;return'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)}
 
 function verificationUrl(){
-  const base=new URL(location.href);base.search='';base.hash='';
-  const code=state.report?.code;
-  if(/^TS-[A-Z0-9]{7}$/.test(String(code||'')))base.searchParams.set('code',String(code).slice(3));
-  return base.toString();
+  const url=new URL(location.href);
+  url.search='';
+  url.hash='';
+  const code=String(state.report?.code||'');
+  if(/^TS-[A-Z0-9]{7}$/.test(code))url.searchParams.set('code',code.slice(3));
+  return url.toString();
 }
-function shareRecordText(){
-  const r=state.report;if(!r)return'TimeSnap verification record';
-  const n=r.n||{};
-  const lines=['TimeSnap Verification','Status: '+(r.n?'Image verified':'Verification incomplete'),'Reference: '+(r.code||'Not available'),'Method: '+(r.method||'Not available')];
-  if(r.n){lines.push('Captured: '+formatTime(n.timestamp));lines.push('Time source: '+(n.source||'Not recorded'));if(n.address)lines.push('Location: '+n.address);if(Number.isFinite(n.lat)&&Number.isFinite(n.lng))lines.push('Coordinates: '+n.lat.toFixed(5)+', '+n.lng.toFixed(5));lines.push('Authenticity: '+(r.fp?.status==='match'?'Verified image and exact file match':'Verified image record'));}
-  lines.push('Open verification: '+verificationUrl());
+
+function shareText(){
+  const r=state.report;
+  if(!r?.n)return 'TimeSnap image verification';
+  const n=r.n;
+  const lines=[
+    'TimeSnap Image Verification',
+    '',
+    'Status: Image verified',
+    `Verification code: ${r.code}`,
+    `Captured: ${formatTime(n.timestamp)}`,
+    `Time source: ${n.source||'Not recorded'}`,
+    `Media type: ${n.media||'Image'}`,
+    `Location: ${n.address||'Not recorded'}`,
+    `Coordinates: ${Number.isFinite(n.lat)&&Number.isFinite(n.lng)?`${n.lat.toFixed(5)}, ${n.lng.toFixed(5)}`:'Not recorded'}`,
+    `Verification method: ${r.method}`,
+    '',
+    'Open the verification link to view the matching TimeSnap record.'
+  ];
   return lines.join('\n');
 }
+
 async function shareVerification(){
-  if(!state.report)return toast('Nothing to share','Complete a verification first.');
-  const data={title:'TimeSnap Verification',text:shareRecordText(),url:verificationUrl()};
-  if(state.file){
-    const file=new File([state.file],state.file.name||'timesnap-image.jpg',{type:state.file.type||'image/jpeg'});
-    if(navigator.canShare?.({files:[file]}))data.files=[file];
-  }
+  if(!state.report?.n)return toast('Unable to share','Only a successfully verified image can be shared.');
+  if(state.shareBusy)return;
+  state.shareBusy=true;
+  el.shareResultBtn.disabled=true;
   try{
-    if(navigator.share){await navigator.share(data);return}
-    await navigator.clipboard.writeText(shareRecordText());toast('Verification copied','The full record and verification link are ready to paste.');
-  }catch(err){if(err?.name!=='AbortError'){try{await navigator.clipboard.writeText(shareRecordText());toast('Verification copied','Direct sharing was unavailable, so the record and link were copied.')}catch{toast('Share unavailable','Please copy the page address from your browser.')}}}
+    const url=verificationUrl();
+    const text=shareText();
+    const file=state.file;
+
+    if(file&&navigator.share){
+      const shareFile=new File([file],file.name||'timesnap-verified-image.jpg',{type:file.type||'image/jpeg'});
+      const payload={title:'TimeSnap verified image',text,url,files:[shareFile]};
+      if(!navigator.canShare||navigator.canShare({files:[shareFile]})){
+        await navigator.share(payload);
+        return;
+      }
+    }
+
+    if(navigator.share){
+      await navigator.share({title:'TimeSnap verified image',text,url});
+    }else{
+      await navigator.clipboard.writeText(`${text}\n\n${url}`);
+      toast('Details copied','The verification details and link are ready to share.');
+    }
+  }catch(err){
+    if(err?.name!=='AbortError'){
+      console.error('Share error:',err);
+      toast('Sharing unavailable',err?.message||'The image and verification link could not be shared.');
+    }
+  }finally{
+    state.shareBusy=false;
+    el.shareResultBtn.disabled=false;
+  }
 }
+
 el.shareResultBtn.addEventListener('click',shareVerification);
-const shared=sanitize(new URLSearchParams(location.search).get('code')||'');if(/^[A-Z0-9]{7}$/.test(shared)){el.manual.value=shared;manualLookup()}
+const params=new URLSearchParams(location.search);
+const sharedCode=sanitize(params.get('code')||'');
+if(/^[A-Z0-9]{7}$/.test(sharedCode)){el.manual.value=sharedCode;manualLookup()}
 </script>
 
 
