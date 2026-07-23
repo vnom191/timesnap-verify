@@ -106,7 +106,35 @@ function progress(n,label,msg=''){el.progress.style.width=n+'%';el.progressLabel
 function toast(t,x=''){clearTimeout(toast.t);$('#toastTitle').textContent=t;$('#toastText').textContent=x;$('#toast').classList.add('show');toast.t=setTimeout(()=>$('#toast').classList.remove('show'),3500)}
 function sanitize(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^TS/,'').slice(0,7)}
 el.manual.addEventListener('input',()=>{el.manual.value=sanitize(el.manual.value);el.help.className='help'});el.manual.addEventListener('keydown',e=>{if(e.key==='Enter')manualLookup()});el.manualBtn.onclick=manualLookup;
-async function manualLookup(){const s=sanitize(el.manual.value);if(!/^[A-Z0-9]{7}$/.test(s)){el.help.textContent='Enter exactly seven letters or numbers.';el.help.className='help error';return}await runLookup('TS-'+s,'Manual code entry',100,null,null)}
+async function manualLookup(){
+  const s=sanitize(el.manual.value);
+  if(!/^[A-Z0-9]{7}$/.test(s)){
+    el.help.textContent='Enter exactly seven letters or numbers.';
+    el.help.className='help error';
+    return;
+  }
+  el.help.textContent='Checking the secure verification record…';
+  el.help.className='help';
+  await runLookup('TS-'+s,'Manual code entry',100,null);
+}
+async function runLookup(code,method='Manual code entry',confidence=100,uploadedHash=null){
+  try{
+    const hit=await lookup(code);
+    if(!hit){
+      el.help.textContent='No matching TimeSnap record was found for this code.';
+      el.help.className='help error';
+      return renderFailure('Verification record not found','No matching TimeSnap record was found for '+code+'. Check the seven characters and try again.',code,method,0);
+    }
+    el.help.textContent='Matching verification record found.';
+    el.help.className='help';
+    return finishVerified(code,method,confidence,hit,uploadedHash);
+  }catch(err){
+    console.error('Manual lookup error:',err);
+    el.help.textContent=safeError(err);
+    el.help.className='help error';
+    return renderFailure('Verification could not finish',safeError(err),code,method,0);
+  }
+}
 el.file.onchange=e=>{const f=e.target.files?.[0];if(f)begin(f)};['dragenter','dragover'].forEach(t=>el.drop.addEventListener(t,e=>{e.preventDefault();el.drop.classList.add('drag')}));['dragleave','drop'].forEach(t=>el.drop.addEventListener(t,e=>{e.preventDefault();el.drop.classList.remove('drag')}));el.drop.addEventListener('drop',e=>{const f=e.dataTransfer.files?.[0];if(f)begin(f)});
 $('#themeBtn').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'};
 $('#againBtn').onclick=()=>{if(state.url)URL.revokeObjectURL(state.url);state.url=null;state.file=null;state.attempts=[];el.file.value='';view('upload')};
@@ -188,12 +216,12 @@ async function shareVerification(){
   el.shareResultBtn.disabled=true;
   try{
     const url=verificationUrl();
-    const text=shareText();
+    const text=`${shareText()}\n\nOpen verification: ${url}`;
     const file=state.file;
 
     if(file&&navigator.share){
       const shareFile=new File([file],file.name||'timesnap-verified-image.jpg',{type:file.type||'image/jpeg'});
-      const payload={title:'TimeSnap verified image',text,url,files:[shareFile]};
+      const payload={title:'TimeSnap verified image',text,files:[shareFile]};
       if(!navigator.canShare||navigator.canShare({files:[shareFile]})){
         await navigator.share(payload);
         return;
@@ -201,9 +229,9 @@ async function shareVerification(){
     }
 
     if(navigator.share){
-      await navigator.share({title:'TimeSnap verified image',text,url});
+      await navigator.share({title:'TimeSnap verified image',text});
     }else{
-      await navigator.clipboard.writeText(`${text}\n\n${url}`);
+      await navigator.clipboard.writeText(text);
       toast('Details copied','The verification details and link are ready to share.');
     }
   }catch(err){
