@@ -1,13 +1,15 @@
-<html lang="en" data-theme="dark"><head>
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a14">
   <meta name="description" content="TimeSnap photo verification">
   <title>TimeSnap Verify</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
   <style>
     :root{--bg:#070a14;--bg2:#03060d;--panel:rgba(14,24,44,.82);--panel2:#101d38;--line:rgba(180,200,237,.14);--line2:rgba(180,200,237,.26);--text:#eef3ff;--muted:#8fa2c8;--blue:#2f6fdb;--blue2:#79adff;--green:#39d98a;--amber:#ffbd59;--red:#ff7373;--shadow:0 24px 80px rgba(0,0,0,.38);--sans:"Manrope",system-ui,sans-serif;--mono:"DM Mono",monospace}
     html[data-theme="light"]{--bg:#eef3fc;--bg2:#dce6f7;--panel:rgba(255,255,255,.88);--panel2:#fff;--line:rgba(20,40,90,.13);--line2:rgba(20,40,90,.25);--text:#101a33;--muted:#607092;--shadow:0 24px 80px rgba(20,35,80,.14)}
@@ -29,7 +31,7 @@
       <div class="grid">
         <section class="panel upload">
           <p class="kicker">01 — image scan</p><h2 class="title">Upload a TimeSnap image</h2>
-          <p class="copy">Keep the full left overlay visible. JPG, PNG and WEBP work best. HEIC support depends on the browser.</p>
+          <p class="copy">Keep the complete TimeSnap overlay visible. Portrait and landscape photos are detected automatically. JPG, PNG and WEBP work best. HEIC support depends on the browser.</p>
           <label class="drop" id="dropZone">
             <input id="fileInput" type="file" accept="image/*">
             <div><div class="uploadIcon">⇧</div><h3>Choose a photo or drag it here</h3><p class="copy">The image is processed privately in your browser. Only its verification reference is checked against the secure TimeSnap database.</p><div class="formats"><span>JPG</span><span>PNG</span><span>WEBP</span><span>HEIC*</span></div></div>
@@ -81,12 +83,12 @@
       <section class="panel mapCard hidden" id="mapCard"><h3>Recorded location</h3><div id="resultMap"></div></section>
     </section>
   </main>
-  <footer class="footer">© <span id="year">2026</span> TimeSnap. Registry matches verify stored records; they do not prove every pixel is unedited.</footer>
+  <footer class="footer">© <span id="year"></span> TimeSnap. Registry matches verify stored records; they do not prove every pixel is unedited.</footer>
 </div>
 
 <div class="toast" id="toast"><strong id="toastTitle"></strong><div id="toastText" class="copy"></div></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js" crossorigin="anonymous"></script>
 <script type="module">
@@ -144,19 +146,25 @@ function safeError(err){const m=String(err?.message||'');if(/permission|denied|u
 function loadImage(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(u);res(img)};img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('Image decode failed'))};img.src=u})}
 async function sha256(file){try{const d=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch{return null}}
 
-async function scanImage(file){step('load','active');progress(8,'Loading image');const [img,hash]=await Promise.all([loadImage(file),sha256(file)]);step('load','done');step('crop','active');progress(18,'Preparing image reference','Reading the left verification overlay.');const matrixPasses=createMatrixPasses(img);const ocrPasses=createOcrPasses(img);step('crop','done');step('code','active');progress(28,'Reading Data Matrix','Trying raw and lightly processed square crops.');const matrix=await readMatrix(matrixPasses);state.attempts=[...matrix.attempts];if(matrix.code){step('db','active');progress(56,'Confirming verification record');const hit=await lookup(matrix.code);if(hit){step('code','done');step('db','done');return finishVerified(matrix.code,'Data Matrix scan',matrix.confidence,hit,hash)}}progress(58,'Reading written code','Barcode did not verify. Running OCR on the complete left overlay.');const ocr=await readOcr(ocrPasses);state.attempts.push(...ocr.attempts);if(!ocr.code){step('code','fail');step('db','fail');return renderFailure('No readable TimeSnap code found','The barcode and written code could not be read reliably. The image may be heavily compressed, blurred or cropped. Use the visible code in manual lookup.','—','Data Matrix + OCR scan',ocr.confidence)}step('code','done');step('db','active');const retry=await lookupCandidates(ocr.candidates);if(!retry){step('db','fail');return renderFailure('Verification record not found','The scanner read '+ocr.code+' and tried likely WhatsApp and OCR character corrections, but no matching record was found.',ocr.code,'OCR scan',ocr.confidence)}step('db','done');return finishVerified(retry.code,retry.code===ocr.code?'OCR scan':'OCR scan · auto-repaired',ocr.confidence,retry.lookup,hash)}
+async function scanImage(file){step('load','active');progress(8,'Loading image');const [img,hash]=await Promise.all([loadImage(file),sha256(file)]);step('load','done');step('crop','active');progress(18,'Preparing image reference','Detecting portrait or landscape layout and reading every possible overlay edge.');const sources=createScanSources(img);const matrixPasses=createMatrixPasses(sources);const ocrPasses=createOcrPasses(sources);step('crop','done');step('code','active');progress(28,'Reading Data Matrix','Trying portrait, landscape and opposite-edge crops.');const matrix=await readMatrix(matrixPasses);state.attempts=[...matrix.attempts];if(matrix.code){step('db','active');progress(56,'Confirming verification record');const hit=await lookup(matrix.code);if(hit){step('code','done');step('db','done');return finishVerified(matrix.code,'Data Matrix scan',matrix.confidence,hit,hash)}}progress(58,'Reading written code','Barcode did not verify. Running orientation-aware OCR on the overlay.');const ocr=await readOcr(ocrPasses);state.attempts.push(...ocr.attempts);if(!ocr.code){step('code','fail');step('db','fail');return renderFailure('No readable TimeSnap code found','The barcode and written code could not be read reliably in portrait or landscape orientation. The image may be heavily compressed, blurred or cropped. Use the visible code in manual lookup.','—','Data Matrix + OCR scan',ocr.confidence)}step('code','done');step('db','active');const retry=await lookupCandidates(ocr.candidates);if(!retry){step('db','fail');return renderFailure('Verification record not found','The scanner read '+ocr.code+' and tried likely WhatsApp and OCR character corrections, but no matching record was found.',ocr.code,'OCR scan',ocr.confidence)}step('db','done');return finishVerified(retry.code,retry.code===ocr.code?'OCR scan':'OCR scan · auto-repaired',ocr.confidence,retry.lookup,hash)}
 
 function cropCanvas(img,x,y,w,h,outW,outH,style='raw',rotate=0){const c=document.createElement('canvas');c.width=outW;c.height=outH;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.save();ctx.translate(c.width/2,c.height/2);ctx.rotate(rotate*Math.PI/180);const dw=rotate?outH:outW,dh=rotate?outW:outH;ctx.drawImage(img,x,y,w,h,-dw/2,-dh/2,dw,dh);ctx.restore();processCanvas(c,style);return c}
 function processCanvas(c,style){if(style==='raw')return;const ctx=c.getContext('2d',{willReadFrequently:true}),im=ctx.getImageData(0,0,c.width,c.height),d=im.data;let hist=new Uint32Array(256),lum=new Uint8Array(d.length/4);for(let i=0,p=0;i<d.length;i+=4,p++){let v=Math.round(.299*d[i]+.587*d[i+1]+.114*d[i+2]);lum[p]=v;hist[v]++}const threshold=otsu(hist,lum.length);for(let i=0,p=0;i<d.length;i+=4,p++){let v=lum[p];if(style==='contrast')v=Math.max(0,Math.min(255,(v-35)*1.35));if(style==='threshold')v=v>threshold?255:0;if(style==='soft-threshold')v=v>Math.max(110,threshold-15)?255:0;if(style==='invert')v=v>threshold?0:255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}ctx.putImageData(im,0,0)}
 function otsu(h,total){let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];let sb=0,wb=0,max=0,best=128;for(let t=0;t<256;t++){wb+=h[t];if(!wb)continue;let wf=total-wb;if(!wf)break;sb+=t*h[t];let mb=sb/wb,mf=(sum-sb)/wf,v=wb*wf*(mb-mf)**2;if(v>max){max=v;best=t}}return best}
-function createMatrixPasses(img){const iw=img.naturalWidth,ih=img.naturalHeight;const zones=[{x:0,y:.27,w:.11,h:.14},{x:0,y:.30,w:.09,h:.12},{x:0,y:.32,w:.075,h:.10},{x:0,y:.34,w:.085,h:.11}];const styles=['raw','contrast','soft-threshold','threshold','invert'];const out=[];for(const z of zones){for(const style of styles){const x=0,y=Math.round(ih*z.y),w=Math.round(iw*z.w),h=Math.round(ih*z.h);out.push({label:`Matrix ${Math.round(z.y*100)}% ${style}`,canvas:cropCanvas(img,x,y,w,h,640,640,style,0)})}}return out}
-function createOcrPasses(img){const iw=img.naturalWidth,ih=img.naturalHeight;const configs=[
- {label:'Full left overlay raw',w:.082,y:.24,h:.52,r:90,s:'raw',psm:7},{label:'Full left overlay raw reverse',w:.082,y:.24,h:.52,r:-90,s:'raw',psm:7},
- {label:'Full left overlay contrast',w:.082,y:.24,h:.52,r:90,s:'contrast',psm:7},{label:'Full left overlay soft threshold',w:.082,y:.24,h:.52,r:90,s:'soft-threshold',psm:7},
- {label:'Code middle raw',w:.075,y:.34,h:.25,r:90,s:'raw',psm:7},{label:'Code middle contrast',w:.075,y:.34,h:.25,r:90,s:'contrast',psm:7},
- {label:'Code middle reverse',w:.075,y:.34,h:.25,r:-90,s:'raw',psm:7},{label:'Wide code raw',w:.095,y:.30,h:.34,r:90,s:'raw',psm:6},
- {label:'Wide code contrast',w:.095,y:.30,h:.34,r:90,s:'contrast',psm:6},{label:'Whole strip sparse',w:.10,y:.18,h:.64,r:90,s:'raw',psm:11}
- ];return configs.map(q=>{const sw=Math.round(iw*q.w),sy=Math.round(ih*q.y),sh=Math.round(ih*q.h);const scale=Math.max(5,Math.min(9,760/sw));const dw=Math.round(sw*scale),dh=Math.round(sh*scale);return{...q,canvas:cropCanvas(img,0,sy,sw,sh,dh,dw,q.s,q.r)}})}
+function sourceSize(src){return{w:src.naturalWidth||src.width,h:src.naturalHeight||src.height}}
+function rotateSource(src,degrees){const {w,h}=sourceSize(src),swap=Math.abs(degrees)%180===90,c=document.createElement('canvas');c.width=swap?h:w;c.height=swap?w:h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.translate(c.width/2,c.height/2);ctx.rotate(degrees*Math.PI/180);ctx.drawImage(src,-w/2,-h/2,w,h);return c}
+function createScanSources(img){const {w,h}=sourceSize(img),landscape=w>h*1.08,out=[{src:img,label:landscape?'Landscape primary':'Portrait primary',priority:0}];out.push({src:rotateSource(img,180),label:'Opposite edge',priority:1});if(landscape){out.push({src:rotateSource(img,90),label:'Landscape rotated right',priority:1});out.push({src:rotateSource(img,-90),label:'Landscape rotated left',priority:1})}return out}
+function createMatrixPasses(sources){const out=[];for(const item of sources){const {w:iw,h:ih}=sourceSize(item.src),short=Math.min(iw,ih),primary=item.priority===0;const centers=primary?[.28,.34,.40,.46,.52]:[.30,.40,.50];const widths=primary?[.078,.105]:[.10];const styles=primary?['raw','contrast']:['raw','contrast'];for(const center of centers){for(const width of widths){const side=Math.max(64,Math.round(short*width)),x=0,y=Math.max(0,Math.min(ih-side,Math.round(ih*center-side/2))),cw=Math.min(iw,Math.round(side*1.35)),ch=Math.min(ih-y,Math.round(side*1.35));for(const style of styles)out.push({label:`${item.label} matrix ${Math.round(center*100)}% ${style}`,canvas:cropCanvas(item.src,x,y,cw,ch,640,640,style,0)})}}}return out}
+function createOcrPasses(sources){const out=[];const primaryConfigs=[
+ {label:'Full overlay raw',w:.082,y:.20,h:.62,r:90,s:'raw',psm:7},{label:'Full overlay raw reverse',w:.082,y:.20,h:.62,r:-90,s:'raw',psm:7},
+ {label:'Full overlay contrast',w:.095,y:.20,h:.62,r:90,s:'contrast',psm:7},{label:'Full overlay soft threshold',w:.095,y:.20,h:.62,r:90,s:'soft-threshold',psm:7},
+ {label:'Code middle raw',w:.078,y:.28,h:.38,r:90,s:'raw',psm:7},{label:'Code middle contrast',w:.090,y:.28,h:.38,r:90,s:'contrast',psm:7},
+ {label:'Code middle reverse',w:.090,y:.28,h:.38,r:-90,s:'raw',psm:7},{label:'Wide code raw',w:.115,y:.24,h:.46,r:90,s:'raw',psm:6},
+ {label:'Wide code contrast',w:.115,y:.24,h:.46,r:90,s:'contrast',psm:6},{label:'Whole strip sparse',w:.125,y:.12,h:.76,r:90,s:'raw',psm:11}
+ ];const fallbackConfigs=[
+ {label:'Fallback full strip',w:.11,y:.16,h:.70,r:90,s:'raw',psm:11},{label:'Fallback full strip reverse',w:.11,y:.16,h:.70,r:-90,s:'raw',psm:11},
+ {label:'Fallback code contrast',w:.105,y:.26,h:.46,r:90,s:'contrast',psm:7},{label:'Fallback code reverse',w:.105,y:.26,h:.46,r:-90,s:'contrast',psm:7}
+ ];for(const item of sources){const {w:iw,h:ih}=sourceSize(item.src),short=Math.min(iw,ih),configs=item.priority===0?primaryConfigs:fallbackConfigs;for(const q of configs){const sw=Math.max(60,Math.min(iw,Math.round(short*q.w))),sy=Math.max(0,Math.min(ih-1,Math.round(ih*q.y))),sh=Math.max(40,Math.min(ih-sy,Math.round(ih*q.h))),scale=Math.max(4,Math.min(10,760/sw)),dw=Math.max(320,Math.round(sw*scale)),dh=Math.max(320,Math.round(sh*scale));out.push({...q,label:`${item.label} · ${q.label}`,canvas:cropCanvas(item.src,0,sy,sw,sh,dh,dw,q.s,q.r)})}}return out}
 
 let wasmPromise=null;async function wasm(){if(!wasmPromise)wasmPromise=import('https://cdn.jsdelivr.net/npm/@sec-ant/zxing-wasm@2.2.0/reader/+esm');return wasmPromise}
 async function detectWasm(c){const m=await wasm();const b=await new Promise(r=>c.toBlob(r,'image/png',1));const rs=await m.readBarcodesFromImageFile(b,{formats:['DataMatrix'],tryHarder:true,maxSymbols:4});return(rs||[]).filter(x=>!x.error).map(x=>x.text||x.rawValue||'').filter(Boolean)}
@@ -250,6 +258,5 @@ const params=new URLSearchParams(location.search);
 const sharedCode=sanitize(params.get('code')||'');
 if(/^[A-Z0-9]{7}$/.test(sharedCode)){el.manual.value=sharedCode;manualLookup()}
 </script>
-
-
-</body></html>
+</body>
+</html>
